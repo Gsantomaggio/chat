@@ -12,8 +12,7 @@ const (
 	CommandMessageKey uint16 = 0x00011
 	Version1          int16  = 1
 
-	chatProtocolHeaderSize = chatProtocolKeySizeBytes +
-		chatProtocolVersionSizeBytes +
+	chatProtocolHeaderSize = chatProtocolHeaderSizeBytes +
 		chatProtocolCorrelationIdSizeBytes
 	chatProtocolKeySizeBytes       = 2
 	chatProtocolKeySizeUint8       = 1
@@ -23,6 +22,8 @@ const (
 	chatProtocolVersionSizeBytes       = 2
 	chatProtocolCorrelationIdSizeBytes = 4
 	chatProtocolKeySizeUint32          = 4
+
+	chatProtocolHeaderSizeBytes = 4
 )
 
 type CommandWrite interface {
@@ -99,7 +100,6 @@ func (l *CommandLogin) Key() uint16 {
 
 func (l *CommandLogin) SizeNeeded() int {
 	return chatProtocolHeaderSize +
-		chatProtocolKeySizeUint32 + // correlationId
 		chatProtocolKeySizeUint16 + // size of the string
 		len(l.username)
 }
@@ -126,8 +126,8 @@ type CommandMessage struct {
 	To            string
 }
 
-func NewCommandMessage(message, to string) *CommandMessage {
-	return &CommandMessage{Message: message, To: to}
+func NewCommandMessage(message, to string, correlationId uint32) *CommandMessage {
+	return &CommandMessage{Message: message, To: to, correlationId: correlationId}
 }
 
 func (m *CommandMessage) UnmarshalBinary(data []byte) error {
@@ -142,14 +142,10 @@ func (m *CommandMessage) Key() uint16 {
 
 func (m *CommandMessage) SizeNeeded() int {
 	return chatProtocolHeaderSize +
-		chatProtocolStringLenSizeBytes +
+		chatProtocolKeySizeUint16 +
 		len(m.Message) +
-		chatProtocolStringLenSizeBytes +
+		chatProtocolKeySizeUint16 +
 		len(m.To)
-}
-
-func (m *CommandMessage) SetCorrelationId(id uint32) {
-	m.correlationId = id
 }
 
 func (m *CommandMessage) CorrelationId() uint32 {
