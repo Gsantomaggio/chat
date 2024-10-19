@@ -1,38 +1,16 @@
-package pkg
+package tcp_server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"gsantomaggio/chat/server/chat"
+	"io"
 	"net"
 	"os"
-	"time"
 )
 
 type TcpServerer interface {
-}
-
-type User struct {
-	Username   string
-	LastLogin  time.Time
-	Connection net.Conn
-	isOnline   bool
-}
-
-func NewUser(username string, Connection net.Conn) *User {
-	return &User{
-		Username:   username,
-		LastLogin:  time.Now(),
-		Connection: Connection,
-		isOnline:   true,
-	}
-}
-
-func (u *User) SetOnline(online bool) {
-	u.isOnline = online
-}
-
-func (u *User) IsOnLine() bool {
-	return u.isOnline
 }
 
 type TcpServer struct {
@@ -92,40 +70,62 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 	writer := bufio.NewWriter(conn)
 	var user *User
 	for {
-		header := &ChatHeader{}
+		header := &chat.ChatHeader{}
 		err := header.Read(reader)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading header: %v\n", err)
+			if errors.Is(err, io.EOF) {
+				fmt.Fprintf(os.Stderr, "Closing connection due of: %v\n", err)
+			}
 			break
 		}
-
-		fmt.Printf("Received header: %+v\n", header)
-
+		code := chat.ResponseCodeOk
+		var correlationId uint32
 		switch header.Key() {
-		case CommandLoginKey:
-			login := &CommandLogin{}
+		case chat.CommandLoginKey:
+			login := &chat.CommandLogin{}
 			err := login.Read(reader)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error reading login: %v\n", err)
 				break
 			}
-			fmt.Printf("Received login: %+v\n", login)
-			genericResponse := NewGenericResponse(login.CorrelationId(), ResponseCodeOk)
-			user = NewUser(login.Username(), conn)
-			t.users[login.Username()] = user
-			_, err = genericResponse.Write(writer)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error writing response: %v\n", err)
-				break
-			}
-			err = writer.Flush()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error flushing writer: %v\n", err)
-				break
+			correlationId = login.CorrelationId()
+
+			if t.users[login.Username()] != nil && t.users[login.Username()].IsOnLine() {
+				code = chat.ResponseCodeErrorUserAlreadyLogged
+			} else {
+				user = NewUser(login.Username(), conn)
+				t.users[login.Username()] = user
 			}
 
-		case CommandMessageKey:
-			// handle command 2
+		case chat.CommandMessageKey:
+			message := &chat.CommandMessage{}
+			err := message.Read(reader)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error reading message: %v\n", err)
+				break
+			}
+			correlationId = message.CorrelationId()
+			if t.users[message.To] != nil {
+				code = chat.ResponseCodeOk
+				toUser := t.users[message.To]
+				err := chat.WriteCommandWithHeader(chat.NewCommandMessageWithCorrelationId(message.Message, message.From, message.To, message.CorrelationId()),
+
+					bufio.NewWriter(toUser.Connection))
+				if err != nil {
+					return
+				}
+			} else {
+				code = chat.ResponseCodeErrorUserNotFound
+				fmt.Fprintf(os.Stderr, "User %s not found\n", message.To)
+			}
+		}
+
+		genericResponse := chat.NewGenericResponse(chat.GenericResponseKey, code)
+		genericResponse.SetCorrelationId(correlationId)
+		err = chat.WriteCommandWithHeader(genericResponse, writer)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error writing response: %v\n", err)
+			return
 		}
 
 	}

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"gsantomaggio/chat/server/pkg"
+	"gsantomaggio/chat/server/tcp_server"
 	"os"
 )
 
 func main() {
 
-	tcpServer := pkg.NewTcpServer("localhost", 5555)
+	tcpServer := tcp_server.NewTcpServer("localhost", 5555)
 	err := tcpServer.StartInAThread()
 
 	if err != nil {

@@ -1,4 +1,4 @@
-package pkg
+package chat
 
 import (
 	"bufio"
@@ -30,8 +30,8 @@ func WriteCommand[T internal.CommandWrite](request T, writer *bufio.Writer) erro
 func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Writer) error {
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	hWritten, err := NewChatHeaderFromCommand(request).Write(writer)
+	hr := NewChatHeaderFromCommand(request)
+	hWritten, err := hr.Write(writer)
 	if err != nil {
 		return err
 	}
@@ -41,6 +41,20 @@ func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Wr
 	}
 	if (bWritten + hWritten) != (request.SizeNeeded() + 4) {
 		panic("WriteTo Command: Not all bytes written")
+	}
+	return writer.Flush()
+}
+
+func WriteResponse[T internal.ResponseWrite](response T, writer *bufio.Writer) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	bWritten, err := response.Write(writer)
+	if err != nil {
+		return err
+	}
+	if (bWritten) != (response.SizeNeeded()) {
+		panic("WriteTo Response: Not all bytes written")
 	}
 	return writer.Flush()
 }

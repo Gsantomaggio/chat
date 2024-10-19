@@ -1,65 +1,69 @@
 package main
 
 import (
-	"bufio"
-	"gsantomaggio/chat/server/pkg"
-	"net"
+	"fmt"
+	"gsantomaggio/chat/server/chat"
+	"gsantomaggio/chat/server/tcp_client"
 )
-
-type FakeClient struct {
-	tcpConn *net.TCPConn
-}
-
-func (f *FakeClient) Connect() error {
-	servAddr := "localhost:5555"
-	tcpAddr, err := net.ResolveTCPAddr("tcp", servAddr)
-	if err != nil {
-		return err
-	}
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-	if err != nil {
-		return err
-	}
-	f.tcpConn = conn
-	return nil
-}
-
-func (f *FakeClient) ReadResponse() (*pkg.GenericResponse, error) {
-	reader := bufio.NewReader(f.tcpConn)
-	g := &pkg.GenericResponse{}
-	err := g.Read(reader)
-	return g, err
-}
-
-func (f *FakeClient) Close() error {
-	return f.tcpConn.Close()
-}
-
-func (f *FakeClient) Login(login *pkg.CommandLogin) error {
-	return pkg.WriteCommandWithHeader(login, bufio.NewWriter(f.tcpConn))
-}
 
 func main() {
 
-	client := &FakeClient{}
-	err := client.Connect()
+	chMessages := make(chan *chat.CommandMessage)
+
+	go func() {
+		for {
+			msg := <-chMessages
+			fmt.Printf("Received message: %+v\n", msg)
+		}
+	}()
+
+	client := tcp_client.NewChatClient(chMessages)
+	err := client.Connect("localhost:5555")
 	if err != nil {
+		fmt.Printf("Error connecting to server: %v\n", err)
 		return
 	}
 
-	login := pkg.NewCommandLogin("user", 12)
-	err = client.Login(login)
+	println("your username")
+	var username string
+	fmt.Scanf("%s", &username)
+
+	res, err := client.Login(username)
 	if err != nil {
 		return
 	}
+	fromCodeToString := "Success"
+	switch res.ResponseCode() {
+	case chat.ResponseCodeErrorUserAlreadyLogged:
+		fromCodeToString = "ErrorUserAlreadyLogged"
+	case chat.ResponseCodeErrorUserNotFound:
+		fromCodeToString = "ErrorUserNotFound"
+	}
 
-	resp, err := client.ReadResponse()
-	if err != nil {
+	if res.ResponseCode() != chat.ResponseCodeOk {
+		fmt.Printf("Login error: %s\n", fromCodeToString)
 		return
 	}
 
-	if resp.ResponseCode() != pkg.ResponseCodeOk {
-		return
+	fmt.Printf("Login %s\n", fromCodeToString)
+
+	for {
+		fmt.Printf("write the user to send a message\n")
+		var userTo string
+		fmt.Scanf("%s", &userTo)
+		fmt.Printf("write the message\n")
+		var message string
+		fmt.Scanf("%s", &message)
+
+		res, err = client.SendMessage(message, userTo)
+		if err != nil {
+			return
+		}
+		if res.ResponseCode() != chat.ResponseCodeOk {
+			return
+		}
+
+		fmt.Printf("Message sent\n")
 	}
 
 }

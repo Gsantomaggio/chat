@@ -1,4 +1,4 @@
-package pkg
+package chat
 
 import (
 	"encoding/binary"
