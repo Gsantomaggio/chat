@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"gsantomaggio/chat/server/chat"
 	"gsantomaggio/chat/server/tcp_client"
+	"os"
 )
 
 func main() {
@@ -11,9 +13,12 @@ func main() {
 	chMessages := make(chan *chat.CommandMessage)
 
 	go func() {
+		totalReceived := 0
 		for {
 			msg := <-chMessages
-			fmt.Printf("Received message: %+v\n", msg)
+			totalReceived++
+			fmt.Printf("%s - From : %s Text: %s - total: %d \n", chat.ConvertUint64ToTimeFormatted(msg.Time),
+				msg.From, msg.Message, totalReceived)
 		}
 	}()
 
@@ -24,46 +29,42 @@ func main() {
 		return
 	}
 
-	println("your username")
-	var username string
-	fmt.Scanf("%s", &username)
+	in := bufio.NewReader(os.Stdin)
+	println("Insert your Username:")
+	username, err := in.ReadString('\n')
+	username = username[:len(username)-1]
 
 	res, err := client.Login(username)
 	if err != nil {
 		return
 	}
-	fromCodeToString := "Success"
-	switch res.ResponseCode() {
-	case chat.ResponseCodeErrorUserAlreadyLogged:
-		fromCodeToString = "ErrorUserAlreadyLogged"
-	case chat.ResponseCodeErrorUserNotFound:
-		fromCodeToString = "ErrorUserNotFound"
-	}
 
 	if res.ResponseCode() != chat.ResponseCodeOk {
-		fmt.Printf("Login error: %s\n", fromCodeToString)
+		fmt.Printf("Login error: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 		return
 	}
 
-	fmt.Printf("Login %s\n", fromCodeToString)
+	fmt.Printf("Login %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 
 	for {
-		fmt.Printf("write the user to send a message\n")
-		var userTo string
-		fmt.Scanf("%s", &userTo)
-		fmt.Printf("write the message\n")
-		var message string
-		fmt.Scanf("%s", &message)
-
+		fmt.Printf("Destination:\n")
+		userTo, _ := in.ReadString('\n')
+		userTo = userTo[:len(userTo)-1]
+		fmt.Printf("Message:\n")
+		message, _ := in.ReadString('\n')
+		message = message[:len(message)-1]
 		res, err = client.SendMessage(message, userTo)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
 			return
 		}
 		if res.ResponseCode() != chat.ResponseCodeOk {
-			return
+			fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+		} else {
+
+			fmt.Printf("Message sent. Response code: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 		}
 
-		fmt.Printf("Message sent\n")
 	}
 
 }

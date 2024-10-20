@@ -33,8 +33,8 @@ func (l *CommandLogin) Key() uint16 {
 }
 
 func (l *CommandLogin) SizeNeeded() int {
-	return chatProtocolHeaderSizeAndCorrelationId +
-		chatProtocolKeySizeUint16 + // size of the string
+	return chatProtocolUint32 + // correlationId
+		chatProtocolSizeUint16 + // size of the string
 		len(l.username)
 }
 
@@ -65,18 +65,19 @@ type CommandMessage struct {
 	Message       string
 	From          string
 	To            string
+	Time          uint64
 }
 
-func NewCommandMessage(message, from string, to string) *CommandMessage {
-	return &CommandMessage{Message: message, From: from, To: to}
+func NewCommandMessage(message, from string, to string, time uint64) *CommandMessage {
+	return &CommandMessage{Message: message, From: from, To: to, Time: time}
 }
 
-func NewCommandMessageWithCorrelationId(message, from string, to string, correlationId uint32) *CommandMessage {
-	return &CommandMessage{Message: message, From: from, To: to, correlationId: correlationId}
+func NewCommandMessageWithCorrelationId(message, from string, to string, correlationId uint32, time uint64) *CommandMessage {
+	return &CommandMessage{Message: message, From: from, To: to, correlationId: correlationId, Time: time}
 }
 
 func (m *CommandMessage) Read(reader *bufio.Reader) error {
-	return readMany(reader, &m.correlationId, &m.Message, &m.From, &m.To)
+	return readMany(reader, &m.correlationId, &m.Message, &m.From, &m.To, &m.Time)
 }
 
 func (m *CommandMessage) Key() uint16 {
@@ -84,12 +85,13 @@ func (m *CommandMessage) Key() uint16 {
 }
 
 func (m *CommandMessage) SizeNeeded() int {
-	return chatProtocolHeaderSizeAndCorrelationId +
-		chatProtocolKeySizeUint16 + // size of the string message
+	return chatProtocolUint32 + // correlationId
+		chatProtocolUint64 + // time
+		chatProtocolSizeUint16 + // size of the string message
 		len(m.Message) + // actual size of the message
-		chatProtocolKeySizeUint16 + // size of the string from
+		chatProtocolSizeUint16 + // size of the string from
 		len(m.From) + // actual size of the "from"
-		chatProtocolKeySizeUint16 + // size of the string to
+		chatProtocolSizeUint16 + // size of the string to
 		len(m.To) // actual size of the "to"
 }
 
@@ -106,32 +108,30 @@ func (m *CommandMessage) Version() int16 {
 }
 
 func (m *CommandMessage) Write(writer *bufio.Writer) (int, error) {
-	return writeMany(writer, m.correlationId, m.Message, m.From, m.To)
+	return writeMany(writer, m.correlationId, m.Message, m.From, m.To, m.Time)
 }
 
 // ChatHeader is the header of the chat protocol.
 type ChatHeader struct {
 	// total size of this header + command content
-	length  int    // 4 bytes
 	command uint16 // 2 bytes
 	version int16  // 2 bytes
 }
 
 func NewChatHeaderFromCommand(command internal.CommandWrite) *ChatHeader {
-	return &ChatHeader{length: command.SizeNeeded(), command: command.Key(), version: command.Version()}
+	return &ChatHeader{command: command.Key(), version: command.Version()}
 }
 
-func NewChatHeader(length int, version int16, command uint16) *ChatHeader {
-	return &ChatHeader{length: length, command: command, version: version}
+func NewChatHeader(version int16, command uint16) *ChatHeader {
+	return &ChatHeader{command: command, version: version}
 }
 
 func (c *ChatHeader) Write(writer *bufio.Writer) (int, error) {
-	return writeMany(writer, c.length, c.version, c.command)
+	return writeMany(writer, c.version, c.command)
 }
 
 func (c *ChatHeader) Read(reader *bufio.Reader) error {
-	return readMany(reader, &c.length, &c.version, &c.command)
-
+	return readMany(reader, &c.version, &c.command)
 }
 
 func (c *ChatHeader) Key() uint16 {
@@ -142,24 +142,22 @@ func (c *ChatHeader) Version() int16 {
 	return c.version
 }
 
-func (c *ChatHeader) Length() int {
-	return c.length
+func (c *ChatHeader) SizeNeeded() int {
+	return chatProtocolHeaderSizeBytes
 }
 
 type GenericResponse struct {
 	correlationId uint32
 	responseCode  uint16
-	key           uint16
 }
 
 func (g *GenericResponse) Key() uint16 {
-	return g.key
+	return GenericResponseKey
 }
 
 func (g *GenericResponse) SizeNeeded() int {
-	return chatProtocolHeaderSizeAndCorrelationId +
-		chatProtocolKeySizeUint16 +
-		chatProtocolKeySizeUint16
+	return chatProtocolUint32 + // correlationId
+		chatProtocolSizeUint16 // responseCode
 }
 
 func (g *GenericResponse) Version() int16 {
@@ -170,9 +168,8 @@ func (g *GenericResponse) SetCorrelationId(id uint32) {
 	g.correlationId = id
 }
 
-func NewGenericResponse(key uint16, responseCode uint16) *GenericResponse {
+func NewGenericResponse(responseCode uint16) *GenericResponse {
 	return &GenericResponse{
-		key:          key,
 		responseCode: responseCode,
 	}
 }
@@ -186,9 +183,9 @@ func (g *GenericResponse) ResponseCode() uint16 {
 }
 
 func (g *GenericResponse) Write(writer *bufio.Writer) (int, error) {
-	return writeMany(writer, g.key, g.correlationId, g.responseCode)
+	return writeMany(writer, g.correlationId, g.responseCode)
 }
 
 func (g *GenericResponse) Read(reader *bufio.Reader) error {
-	return readMany(reader, &g.key, &g.correlationId, &g.responseCode)
+	return readMany(reader, &g.correlationId, &g.responseCode)
 }

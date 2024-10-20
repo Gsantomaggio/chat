@@ -7,7 +7,6 @@ import (
 	"gsantomaggio/chat/server/chat"
 	"io"
 	"net"
-	"os"
 )
 
 type TcpServerer interface {
@@ -18,13 +17,21 @@ type TcpServer struct {
 	port     int
 	users    map[string]*User
 	listener net.Listener
+	chEvents chan *Event
 }
 
-func NewTcpServer(host string, port int) *TcpServer {
+func NewTcpServer(host string, port int, events chan *Event) *TcpServer {
 	return &TcpServer{
-		host:  host,
-		port:  port,
-		users: make(map[string]*User),
+		host:     host,
+		port:     port,
+		users:    make(map[string]*User),
+		chEvents: events,
+	}
+}
+
+func (t *TcpServer) DispatchEvent(message string, isAnError bool) {
+	if t.chEvents != nil {
+		t.chEvents <- NewEvent(message, isAnError)
 	}
 }
 
@@ -32,7 +39,7 @@ func (t *TcpServer) StartInAThread() error {
 	go func() {
 		err := t.Start()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error starting TCP server: %v\n", err)
+			t.DispatchEvent(fmt.Sprintf("Error starting server: %v", err), true)
 		}
 	}()
 	return nil
@@ -41,22 +48,22 @@ func (t *TcpServer) Start() error {
 	address := fmt.Sprintf("%s:%d", t.host, t.port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
+		t.DispatchEvent(fmt.Sprintf("Error starting server: %v", err), true)
 		return fmt.Errorf("error starting TCP server: %v", err)
 	}
 	t.listener = listener
 
-	fmt.Printf("Server started on %s\n", address)
-
+	t.DispatchEvent(fmt.Sprintf("Server started at %s", address), false)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error accepting connection: %v\n", err)
+			t.DispatchEvent(fmt.Sprintf("Error accepting connection: %v", err), true)
 			break
 		}
 		go t.handleConnection(conn)
 	}
 
-	fmt.Printf("Server stopped\n")
+	t.DispatchEvent("Server stopped", false)
 	return nil
 }
 
@@ -70,69 +77,90 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 	writer := bufio.NewWriter(conn)
 	var user *User
 	for {
+
+		readerFull, err := chat.ReadFullBufferFromSource(reader)
+		if err != nil {
+			t.DispatchEvent(fmt.Sprintf("Error reading source: %v", err), true)
+			return
+		}
+
 		header := &chat.ChatHeader{}
-		err := header.Read(reader)
+		err = header.Read(readerFull)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				fmt.Fprintf(os.Stderr, "Closing connection due of: %v\n", err)
+				t.DispatchEvent("Connection closed due of EOF", false)
+			} else {
+				t.DispatchEvent(fmt.Sprintf("Error reading header: %v", err), true)
 			}
 			break
 		}
-		code := chat.ResponseCodeOk
 		var correlationId uint32
+		var lastSendError error
 		switch header.Key() {
 		case chat.CommandLoginKey:
 			login := &chat.CommandLogin{}
-			err := login.Read(reader)
+			err := login.Read(readerFull)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error reading login: %v\n", err)
+				t.DispatchEvent(fmt.Sprintf("Error reading login: %v", err), true)
 				break
 			}
 			correlationId = login.CorrelationId()
-
+			t.DispatchEvent(fmt.Sprintf("Login request for user %s", login.Username()), false)
 			if t.users[login.Username()] != nil && t.users[login.Username()].IsOnLine() {
-				code = chat.ResponseCodeErrorUserAlreadyLogged
+				t.DispatchEvent(fmt.Sprintf("User %s already logged", login.Username()), false)
+				lastSendError = t.sendBackResponse(chat.ResponseCodeErrorUserAlreadyLogged, correlationId, writer)
 			} else {
-				user = NewUser(login.Username(), conn)
-				t.users[login.Username()] = user
+				if t.users[login.Username()] != nil {
+					t.DispatchEvent(fmt.Sprintf("User %s reconnected", login.Username()), false)
+				} else {
+					t.DispatchEvent(fmt.Sprintf("New User %s logged in", login.Username()), false)
+					t.users[login.Username()] = NewUser(login.Username(), t.chEvents)
+				}
+				user = t.users[login.Username()]
+				lastSendError = t.sendBackResponse(chat.ResponseCodeOk, correlationId, writer)
+				user.UpdateWriter(writer)
 			}
 
 		case chat.CommandMessageKey:
 			message := &chat.CommandMessage{}
-			err := message.Read(reader)
+			err := message.Read(readerFull)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error reading message: %v\n", err)
+				t.DispatchEvent(fmt.Sprintf("Error reading message: %v", err), true)
 				break
 			}
 			correlationId = message.CorrelationId()
 			if t.users[message.To] != nil {
-				code = chat.ResponseCodeOk
+				t.DispatchEvent(fmt.Sprintf("Message from %s to %s: %s", message.From, message.To, message.Message), false)
+				lastSendError = t.sendBackResponse(chat.ResponseCodeOk, correlationId, writer)
 				toUser := t.users[message.To]
-				err := chat.WriteCommandWithHeader(chat.NewCommandMessageWithCorrelationId(message.Message, message.From, message.To, message.CorrelationId()),
-
-					bufio.NewWriter(toUser.Connection))
-				if err != nil {
-					return
-				}
+				toUser.AddMessage(message.From, message.To, message.Message, message.Time)
 			} else {
-				code = chat.ResponseCodeErrorUserNotFound
-				fmt.Fprintf(os.Stderr, "User %s not found\n", message.To)
+				t.DispatchEvent(fmt.Sprintf("User %s not found", message.To), false)
+				lastSendError = t.sendBackResponse(chat.ResponseCodeErrorUserNotFound, correlationId, writer)
 			}
 		}
 
-		genericResponse := chat.NewGenericResponse(chat.GenericResponseKey, code)
-		genericResponse.SetCorrelationId(correlationId)
-		err = chat.WriteCommandWithHeader(genericResponse, writer)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error writing response: %v\n", err)
-			return
+		if lastSendError != nil {
+			t.DispatchEvent(fmt.Sprintf("Error sending response: %v", lastSendError), true)
+			break
+		}
+
+		if user != nil {
+			t.DispatchEvent(fmt.Sprintf("Response sent to user %s correlationId %d", user.Username, correlationId), false)
 		}
 
 	}
 	if user != nil {
 		user.SetOnline(false)
+		t.DispatchEvent(fmt.Sprintf("User %s logged out", user.Username), false)
 	}
 
+}
+
+func (t *TcpServer) sendBackResponse(code uint16, correlationId uint32, writer *bufio.Writer) error {
+	genericResponse := chat.NewGenericResponse(code)
+	genericResponse.SetCorrelationId(correlationId)
+	return chat.WriteCommandWithHeader(genericResponse, writer)
 }
 
 func (t *TcpServer) Users() map[string]*User {

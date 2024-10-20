@@ -2,9 +2,11 @@ package tcp_client
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"gsantomaggio/chat/server/chat"
 	"gsantomaggio/chat/server/internal"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -93,12 +95,7 @@ func (f *ChatClient) Connect(servAddr string) error {
 	f.tcpConn = conn
 
 	go func() {
-		for {
-			err := f.WaitMessages()
-			if err != nil {
-				return
-			}
-		}
+		f.WaitMessages()
 	}()
 
 	return nil
@@ -129,7 +126,7 @@ func (f *ChatClient) Login(user string) (*chat.GenericResponse, error) {
 }
 
 func (f *ChatClient) SendMessage(message string, to string) (*chat.GenericResponse, error) {
-	commandMessage := chat.NewCommandMessage(message, f.currentUser, to)
+	commandMessage := chat.NewCommandMessage(message, f.currentUser, to, chat.ConvertTimeToUint64(time.Now()))
 	return f.sendRPCCommand(commandMessage)
 }
 
@@ -139,20 +136,31 @@ func (f *ChatClient) ReadMessage(reader *bufio.Reader) (*chat.CommandMessage, er
 	return msg, err
 }
 
-func (f *ChatClient) WaitMessages() error {
+func (f *ChatClient) WaitMessages() {
 	reader := bufio.NewReader(f.tcpConn)
 	for {
-		header := &chat.ChatHeader{}
-		err := header.Read(reader)
+		dataReader, err := chat.ReadFullBufferFromSource(reader)
 		if err != nil {
-			return err
+			fmt.Printf("Error reading source: %v\n", err)
+			return
+		}
+		header := &chat.ChatHeader{}
+		err = header.Read(dataReader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				fmt.Printf("Connection closed due of EOF. The thread is terminated\n")
+			} else {
+				fmt.Printf("Error reading header: %v\n", err)
+			}
+			break
 		}
 		switch header.Key() {
 		case chat.CommandMessageKey:
 			{
-				msg, err := f.ReadMessage(reader)
+				msg, err := f.ReadMessage(dataReader)
 				if err != nil {
-					return nil
+					fmt.Printf("Error reading message: %v\n", err)
+					return
 				}
 
 				f.chMessages <- msg
@@ -161,9 +169,10 @@ func (f *ChatClient) WaitMessages() error {
 		case chat.GenericResponseKey:
 			{
 				generic := &chat.GenericResponse{}
-				err := generic.Read(reader)
+				err := generic.Read(dataReader)
 				if err != nil {
-					return err
+					fmt.Printf("Error reading generic response: %v\n", err)
+					return
 				}
 				res := f.GetResponse(generic.CorrelationId())
 				res.data <- generic
@@ -171,6 +180,5 @@ func (f *ChatClient) WaitMessages() error {
 
 		}
 
-		return nil
 	}
 }

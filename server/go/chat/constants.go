@@ -6,19 +6,18 @@ const (
 	GenericResponseKey uint16 = 0x03
 	Version1           int16  = 1
 
-	chatProtocolHeaderSizeAndCorrelationId = chatProtocolHeaderSizeBytes +
-		chatProtocolCorrelationIdSizeBytes
+	chatProtocolHeaderSizeBytes = chatProtocolVersionSizeBytes + // version
+		chatProtocolKeySizeBytes // command
 	chatProtocolKeySizeBytes       = 2
 	chatProtocolKeySizeUint8       = 1
-	chatProtocolKeySizeUint16      = 2
+	chatProtocolSizeUint16         = 2
 	chatProtocolKeySizeInt         = 4
 	chatProtocolStringLenSizeBytes = 2
 
 	chatProtocolVersionSizeBytes       = 2
 	chatProtocolCorrelationIdSizeBytes = 4
-	chatProtocolKeySizeUint32          = 4
-
-	chatProtocolHeaderSizeBytes = 4
+	chatProtocolUint32                 = 4
+	chatProtocolUint64                 = 8
 )
 
 // / response codes

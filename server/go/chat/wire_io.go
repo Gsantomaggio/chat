@@ -31,6 +31,12 @@ func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Wr
 	mutex.Lock()
 	defer mutex.Unlock()
 	hr := NewChatHeaderFromCommand(request)
+	// as first write how log is the whole message
+	// so header + command
+	// for example: Login is 4 header bytes + the login size
+	// TODO: ascii schema for that
+	writtenLength, _ := writeMany(writer, request.SizeNeeded()+hr.SizeNeeded())
+
 	hWritten, err := hr.Write(writer)
 	if err != nil {
 		return err
@@ -39,7 +45,7 @@ func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Wr
 	if err != nil {
 		return err
 	}
-	if (bWritten + hWritten) != (request.SizeNeeded() + 4) {
+	if (bWritten + hWritten) != (request.SizeNeeded() + writtenLength) {
 		panic("WriteTo Command: Not all bytes written")
 	}
 	return writer.Flush()

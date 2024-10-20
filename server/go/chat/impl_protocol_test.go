@@ -10,15 +10,14 @@ import (
 var _ = Describe("Protocol", func() {
 	Context("ChatHeader", func() {
 		It("can encode itself into a binary sequence", func() {
-			header := NewChatHeader(5, 2, 1)
+			header := NewChatHeader(2, 1)
 
 			buff := &bytes.Buffer{}
 			wr := bufio.NewWriter(buff)
-			Expect(header.Write(wr)).To(BeNumerically("==", chatProtocolKeySizeInt+chatProtocolKeySizeUint16+chatProtocolKeySizeUint16))
+			Expect(header.Write(wr)).To(BeNumerically("==", chatProtocolHeaderSizeBytes))
 			Expect(wr.Flush()).To(Succeed())
 
 			Expect(buff.Bytes()).To(Equal([]byte{
-				0x00, 0x00, 0x00, 0x005, // length
 				0x00, 0x02, // version
 				0x00, 0x01, // command
 			}))
@@ -27,7 +26,6 @@ var _ = Describe("Protocol", func() {
 		It("can decode a binary sequence", func() {
 			header := &ChatHeader{}
 			byteSequence := []byte{
-				0x00, 0x00, 0x00, 0x008, // length
 				0x00, 0x02, // version
 				0x00, 0x01, // command
 			}
@@ -35,14 +33,12 @@ var _ = Describe("Protocol", func() {
 			Expect(header.Read(bufio.NewReader(bytes.NewReader(byteSequence)))).To(Succeed())
 			Expect(header.Version()).To(BeNumerically("==", 0x0002))
 			Expect(header.Key()).To(BeNumerically("==", 0x001))
-			Expect(header.Length()).To(BeNumerically("==", 0x0008))
 
 			headerB := &ChatHeader{}
 			buff := bytes.NewReader(byteSequence)
 			Expect(headerB.Read(bufio.NewReader(buff))).To(Succeed())
 			Expect(headerB.Version()).To(BeNumerically("==", 0x0002))
 			Expect(headerB.Key()).To(BeNumerically("==", 0x001))
-			Expect(headerB.Length()).To(BeNumerically("==", 0x0008))
 		})
 
 	})
@@ -75,14 +71,15 @@ var _ = Describe("Protocol", func() {
 
 		It("can return the size needed to encode the frame", func() {
 			login := NewCommandLoginWithCorrelation("user", 1)
-			expectedSize := 2 + 2 + 4 + // key ID + version + correlation ID {header}
-				2 + 4 // uint16 for the username string  + uint32 username string length
+			expectedSize :=
+				4 + // correlation ID
+					2 + 4 // uint16 for the username string  + username string length
 
 			Expect(login.SizeNeeded()).To(Equal(expectedSize))
 
 			buff := &bytes.Buffer{}
 			wr := bufio.NewWriter(buff)
-			Expect(login.Write(wr)).To(BeNumerically("==", login.SizeNeeded()-chatProtocolHeaderSizeBytes))
+			Expect(login.Write(wr)).To(BeNumerically("==", login.SizeNeeded()))
 			Expect(wr.Flush()).To(Succeed())
 
 			Expect(buff.Bytes()).To(Equal([]byte{
@@ -125,16 +122,17 @@ var _ = Describe("Protocol", func() {
 
 		It("can return the size needed to encode the frame", func() {
 			msg := NewCommandMessageWithCorrelationId("hello", "from", "to", 1)
-			expectedSize := 2 + 2 + 4 + // key ID + version + correlation ID {header}
-				2 + 5 + // uint16 for the message string  + uint32 message string length
-				2 + 4 + // from uint16 for the to string  + uint32 to string length
-				2 + 2 // to uint16 for the to string  + uint32 to string length
+			expectedSize :=
+				4 + // correlation ID
+					2 + 5 + // uint16 for the message string  + uint32 message string length
+					2 + 4 + // from uint16 for the to string  + uint32 to string length
+					2 + 2 // to uint16 for the to string  + uint32 to string length
 
 			Expect(msg.SizeNeeded()).To(Equal(expectedSize))
 
 			buff := &bytes.Buffer{}
 			wr := bufio.NewWriter(buff)
-			Expect(msg.Write(wr)).To(BeNumerically("==", msg.SizeNeeded()-chatProtocolHeaderSizeBytes))
+			Expect(msg.Write(wr)).To(BeNumerically("==", msg.SizeNeeded()))
 			Expect(wr.Flush()).To(Succeed())
 
 			Expect(buff.Bytes()).To(Equal([]byte{
@@ -159,7 +157,10 @@ var _ = Describe("Protocol", func() {
 			err := WriteCommandWithHeader(login, writer)
 			Expect(err).To(Succeed())
 
-			reader := bufio.NewReader(buff)
+			reader, err := ReadFullBufferFromSource(bufio.NewReader(buff))
+			if err != nil {
+				return
+			}
 			chatHeaderRead := &ChatHeader{}
 			loginRead := &CommandLogin{}
 
@@ -167,7 +168,6 @@ var _ = Describe("Protocol", func() {
 			Expect(err).To(Succeed())
 			Expect(chatHeaderRead.Version()).To(BeNumerically("==", 0x0001))
 			Expect(chatHeaderRead.Key()).To(BeNumerically("==", 0x01))
-			Expect(chatHeaderRead.Length()).To(BeNumerically("==", 14))
 
 			err = loginRead.Read(reader)
 			Expect(err).To(Succeed())
@@ -177,7 +177,7 @@ var _ = Describe("Protocol", func() {
 
 		It("Header + CommandMessage should encode and decode ", func() {
 
-			msg := NewCommandMessageWithCorrelationId("hello", "user_from", "user_to", 1)
+			msg := NewCommandMessageWithCorrelationId("hello", "user_from", "user_to", 14)
 
 			buff := &bytes.Buffer{}
 			writer := bufio.NewWriter(buff)
@@ -185,7 +185,11 @@ var _ = Describe("Protocol", func() {
 			err := WriteCommandWithHeader(msg, writer)
 			Expect(err).To(Succeed())
 
-			reader := bufio.NewReader(buff)
+			reader, err := ReadFullBufferFromSource(bufio.NewReader(buff))
+			if err != nil {
+				return
+			}
+
 			chatHeaderRead := &ChatHeader{}
 			msgRead := &CommandMessage{}
 
@@ -193,13 +197,12 @@ var _ = Describe("Protocol", func() {
 			Expect(err).To(Succeed())
 			Expect(chatHeaderRead.Version()).To(BeNumerically("==", 0x0001))
 			Expect(chatHeaderRead.Key()).To(BeNumerically("==", 0x02))
-			Expect(chatHeaderRead.Length()).To(BeNumerically("==", 35))
 			err = msgRead.Read(reader)
 			Expect(err).To(Succeed())
 			Expect(msgRead.Message).To(Equal("hello"))
 			Expect(msgRead.From).To(Equal("user_from"))
 			Expect(msgRead.To).To(Equal("user_to"))
-			Expect(msgRead.CorrelationId()).To(BeNumerically("==", 1))
+			Expect(msgRead.CorrelationId()).To(BeNumerically("==", 14))
 		})
 	})
 
