@@ -62,9 +62,9 @@ func (u *User) Close() {
 	u.SetOnline(false)
 }
 
-func (u *User) DispatchEvent(message string, isAnError bool) {
+func (u *User) DispatchEvent(message string, isAnError bool, level int) {
 	if u.chEvents != nil {
-		u.chEvents <- NewEvent(message, isAnError)
+		u.chEvents <- NewEvent(message, isAnError, level)
 	}
 }
 
@@ -80,7 +80,7 @@ func (u *User) AddMessage(from, to, message string, sent uint64) {
 	if u.isOnline {
 		u.chNotify <- struct{}{}
 	} else {
-		u.DispatchEvent(fmt.Sprintf("User %s is offline and received a message from %s", u.Username, from), false)
+		u.DispatchEvent(fmt.Sprintf("User %s is offline and received a message from %s", u.Username, from), false, 4)
 	}
 }
 
@@ -89,9 +89,8 @@ func (u *User) sendMessageInAThread() {
 		for _ = range u.chNotify {
 			u.mutex.Lock()
 			for _, message := range u.Messages {
-				//time.Sleep(100 * time.Millisecond)
 				if message.To != u.Username {
-					u.DispatchEvent(fmt.Sprintf("Message from %s to %s not sent", message.From, u.Username), false)
+					u.DispatchEvent(fmt.Sprintf("Message from %s to %s not sent", message.From, u.Username), false, 2)
 					continue
 				}
 				err := chat.WriteCommandWithHeader(
@@ -100,9 +99,9 @@ func (u *User) sendMessageInAThread() {
 						message.From, u.Username,
 						0, message.Sent),
 					u.writer)
-				u.DispatchEvent(fmt.Sprintf("Sent message from %s to %s message: %s", message.From, u.Username, message.Message), false)
+				u.DispatchEvent(fmt.Sprintf("Sent message from %s to %s message: %s", message.From, u.Username, message.Message), false, 2)
 				if err != nil {
-					u.DispatchEvent(fmt.Sprintf("Error sending message to %s: %v", u.Username, err), true)
+					u.DispatchEvent(fmt.Sprintf("Error sending message to %s: %v", u.Username, err), true, 3)
 					break
 				}
 			}
