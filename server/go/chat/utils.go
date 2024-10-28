@@ -42,5 +42,5 @@ func ConvertUint64ToTime(nanoseconds uint64) time.Time {
 // Convert and format
 
 func ConvertUint64ToTimeFormatted(nanoseconds uint64) string {
-	return ConvertUint64ToTime(nanoseconds).Format(time.RFC3339)
+	return ConvertUint64ToTime(nanoseconds).Format(time.RFC822)
 }

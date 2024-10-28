@@ -3,13 +3,19 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
 	"gsantomaggio/chat/server/chat"
 	"gsantomaggio/chat/server/tcp_client"
 	"os"
 )
 
 func main() {
-
+	args := os.Args
+	if len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s <server_address>\n", os.Args[0])
+		return
+	}
+	in := bufio.NewReader(os.Stdin)
 	chMessages := make(chan *chat.CommandMessage)
 
 	go func() {
@@ -17,21 +23,22 @@ func main() {
 		for {
 			msg := <-chMessages
 			totalReceived++
-			fmt.Printf("%s - From : %s Text: %s - total: %d \n", chat.ConvertUint64ToTimeFormatted(msg.Time),
+			color.Green("****** New message received ******\n")
+			color.Green("%s -From : %s Text: %s - total: %d \n", chat.ConvertUint64ToTimeFormatted(msg.Time),
 				msg.From, msg.Message, totalReceived)
+			color.Green("****** End message received ******\n")
 		}
 	}()
 
 	client := tcp_client.NewChatClient(chMessages)
-	err := client.Connect("localhost:5555")
+	err := client.Connect(args[1])
 	if err != nil {
 		fmt.Printf("Error connecting to server: %v\n", err)
 		return
 	}
 
-	in := bufio.NewReader(os.Stdin)
-	println("Insert your Username:")
-	username, err := in.ReadString('\n')
+	fmt.Printf("Enter your user name:\n")
+	username, _ := in.ReadString('\n')
 	username = username[:len(username)-1]
 
 	res, err := client.Login(username)
@@ -47,10 +54,10 @@ func main() {
 	fmt.Printf("Login %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 
 	for {
-		fmt.Printf("Destination:\n")
+		fmt.Printf("Write a me message to:\n")
 		userTo, _ := in.ReadString('\n')
 		userTo = userTo[:len(userTo)-1]
-		fmt.Printf("Message:\n")
+		fmt.Printf("Message text:\n")
 		message, _ := in.ReadString('\n')
 		message = message[:len(message)-1]
 		res, err = client.SendMessage(message, userTo)

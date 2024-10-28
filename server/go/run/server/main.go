@@ -26,7 +26,6 @@ func printColoredMessage(event *tcp_server.Event) {
 func main() {
 
 	events := make(chan *tcp_server.Event)
-
 	go func() {
 		for event := range events {
 			printColoredMessage(event)
