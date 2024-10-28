@@ -59,7 +59,9 @@ The protocol is a binary protocol with the following structure:
 | `To`            | `string` |          |                   |
 | `Time`          | `uint64` |          |                   |
 
-## Responses
+## Response
+
+All the commands will have a response with the following structure:
 
 | Name            | Type     | value(s) | reference         |
 |-----------------|----------|----------|-------------------|
@@ -86,46 +88,56 @@ The protocol is a binary protocol with the following structure:
 For Example: `CommandLogin` with username `user1`
 
 - `Header`:
-  - `version` = 0x01 ==> 1 byte
-  - `command` = 0x01 ==> 2 bytes
+  - `version` = 0x01 => 1 byte
+  - `command` = 0x01 => 2 bytes
 - `CommandLogin`:
-  - `correlationId` = 0x01 ==> 4 bytes
-  - `username` = "user1" ==> length = 2 + 5 = 7
+  - `correlationId` = 0x01 => 4 bytes
+  - `username` = "user1" => length = 2 + 5 = 7
 
-- Write the length of the whole message: 3 + 11  = 14
+- Write the length of the whole message: 3 + 11 = 14
 - Write the `header` + `message`:
-- 0x01 ==>  - version  (1 byte)
-- 0x00 0x01  ==> command ( 2 bytes)
-- 0x00 0x00 0x00 0x01  ==> correlationId (4 bytes) 
-- 0x00 0x01 // username length  (2 bytes)
-- 0x75 0x73 0x65 0x72 0x31 ==> username (5 bytes)
+```
+0x01 =>  version  (1 byte)
+0x00 0x01  => command ( 2 bytes)
+0x00 0x00 0x00 0x01  => correlationId (4 bytes) 
+0x00 0x01 => username  length  (2 bytes)
+0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes)
+```
 - Total bytes written: 14 + 4 = 20
 - Send the message
-- Read the response
+- Read the `Response`
 
 ### Read data from the socket
 
-- Read the length of the whole message (header + command) as a `uint32`
-- Read the header
-- Read the command key 
-- Read the command based on the key
+- Read the length of the whole message (`header` + `command`) as a `uint32`
+- Read the `header`
+- Read the `command key` 
+- Read the `command` based on the `key`
 
 For Example: `CommandLogin` with username `user1`
 
 - Read the first 4 bytes for the length of the whole message: 14
 - Ensure the socket buffer has at least 14 bytes
 - Read the header:
-  - Read the version: 0x01
-  - Read the command: 0x01
-  - Read the command based on the key: `CommandLogin`
-    - Read the correlationId: 0x01
+  - Read the `version`: 0x01
+  - Read the `command`: 0x01
+  - Read the `command` based on the `key`: `CommandLogin`
+    - Read the `correlationId`: 0x01
     - Read the username: "user1"
   - Process the command
-  - Send the response
+  - Send the `Response`
+
+
+### CorrelationId
+
+The `correlationId` is a unique identifier for each command sent by the client.
+The server will send back the `correlationId` to the client.
+So the client can match the response with the command sent.
+You must be sure to provide a unique `correlationId` for each command sent.
 
 ### Server Side Mandatory Features
 
-- [x] Login (without password)
+- [x] Login (without password. It is enough to send the username)
 - [x] Send message and dispatch to the correct user
 - [x] Store in memory the users with the status (online/offline)
 - [x] Store in memory the off-line messages when the user is not online
