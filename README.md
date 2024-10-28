@@ -127,8 +127,8 @@ For Example: `CommandLogin` with username `user1`
 
 - [x] Login (without password)
 - [x] Send message and dispatch to the correct user
-- [x] Store the users with the status (online/offline)
-- [x] Store the off-line messages when the user is not online
+- [x] Store in memory the users with the status (online/offline)
+- [x] Store in memory the off-line messages when the user is not online
 - [x] Send the off-line messages when the user logs in
 
 ### Server Side Nice to have Features
