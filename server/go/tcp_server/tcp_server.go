@@ -7,25 +7,31 @@ import (
 	"gsantomaggio/chat/server/chat"
 	"io"
 	"net"
+	"sync"
+	"time"
 )
 
 type TcpServerer interface {
 }
 
 type TcpServer struct {
-	host     string
-	port     int
-	users    map[string]*User
-	listener net.Listener
-	chEvents chan *Event
+	host      string
+	port      int
+	users     map[string]*User
+	mutexMap  sync.Mutex
+	listener  net.Listener
+	chEvents  chan *Event
+	isRunning bool
 }
 
 func NewTcpServer(host string, port int, events chan *Event) *TcpServer {
 	return &TcpServer{
-		host:     host,
-		port:     port,
-		users:    make(map[string]*User),
-		chEvents: events,
+		host:      host,
+		port:      port,
+		users:     make(map[string]*User),
+		mutexMap:  sync.Mutex{},
+		chEvents:  events,
+		isRunning: false,
 	}
 }
 
@@ -33,6 +39,25 @@ func (t *TcpServer) DispatchEvent(message string, isAnError bool, level int) {
 	if t.chEvents != nil {
 		t.chEvents <- NewEvent(message, isAnError, level)
 	}
+}
+
+func (t *TcpServer) dispatchUserStatus() {
+
+	go func() {
+		for t.isRunning {
+			var userStatus []string
+			for _, user := range t.Users() {
+				if user.IsOnLine() {
+					userStatus = append(userStatus, fmt.Sprintf("\n %s is online, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
+				} else {
+					userStatus = append(userStatus, fmt.Sprintf("\n %s is offline, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
+				}
+			}
+			t.DispatchEvent(fmt.Sprintf("Users status:%s \n", userStatus), false, 1)
+			time.Sleep(5 * time.Second)
+		}
+	}()
+
 }
 
 func (t *TcpServer) StartInAThread() error {
@@ -54,6 +79,8 @@ func (t *TcpServer) Start() error {
 	t.listener = listener
 
 	t.DispatchEvent(fmt.Sprintf("Server started at %s", address), false, 2)
+	t.isRunning = true
+	t.dispatchUserStatus()
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -106,18 +133,18 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 			}
 			correlationId = login.CorrelationId()
 			t.DispatchEvent(fmt.Sprintf("Login request for user %s", login.Username()), false, 1)
-			if t.users[login.Username()] != nil && t.users[login.Username()].IsOnLine() {
+			if t.Users()[login.Username()] != nil && t.Users()[login.Username()].IsOnLine() {
 				t.DispatchEvent(fmt.Sprintf("User %s already logged", login.Username()), false, 4)
-				lastSendError = t.sendBackResponse(chat.ResponseCodeErrorUserAlreadyLogged, correlationId, writer)
+				lastSendError = t.sendResponse(chat.ResponseCodeErrorUserAlreadyLogged, correlationId, writer)
 			} else {
-				if t.users[login.Username()] != nil {
+				if t.Users()[login.Username()] != nil {
 					t.DispatchEvent(fmt.Sprintf("User %s reconnected", login.Username()), false, 1)
 				} else {
 					t.DispatchEvent(fmt.Sprintf("New User %s logged in", login.Username()), false, 1)
-					t.users[login.Username()] = NewUser(login.Username(), t.chEvents)
+					t.Users()[login.Username()] = NewUser(login.Username(), t.chEvents)
 				}
-				user = t.users[login.Username()]
-				lastSendError = t.sendBackResponse(chat.ResponseCodeOk, correlationId, writer)
+				user = t.Users()[login.Username()]
+				lastSendError = t.sendResponse(chat.ResponseCodeOk, correlationId, writer)
 				user.UpdateWriter(writer)
 			}
 
@@ -129,14 +156,14 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 				break
 			}
 			correlationId = message.CorrelationId()
-			if t.users[message.To] != nil {
+			if t.Users()[message.To] != nil {
 				t.DispatchEvent(fmt.Sprintf("Message from %s to %s: %s", message.From, message.To, message.Message), false, 2)
-				lastSendError = t.sendBackResponse(chat.ResponseCodeOk, correlationId, writer)
-				toUser := t.users[message.To]
+				lastSendError = t.sendResponse(chat.ResponseCodeOk, correlationId, writer)
+				toUser := t.Users()[message.To]
 				toUser.AddMessage(message.From, message.To, message.Message, message.Time)
 			} else {
 				t.DispatchEvent(fmt.Sprintf("User %s not found", message.To), true, 3)
-				lastSendError = t.sendBackResponse(chat.ResponseCodeErrorUserNotFound, correlationId, writer)
+				lastSendError = t.sendResponse(chat.ResponseCodeErrorUserNotFound, correlationId, writer)
 			}
 		}
 
@@ -157,12 +184,14 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 
 }
 
-func (t *TcpServer) sendBackResponse(code uint16, correlationId uint32, writer *bufio.Writer) error {
+func (t *TcpServer) sendResponse(code uint16, correlationId uint32, writer *bufio.Writer) error {
 	genericResponse := chat.NewGenericResponse(code)
 	genericResponse.SetCorrelationId(correlationId)
 	return chat.WriteCommandWithHeader(genericResponse, writer)
 }
 
 func (t *TcpServer) Users() map[string]*User {
+	t.mutexMap.Lock()
+	defer t.mutexMap.Unlock()
 	return t.users
 }
