@@ -15,23 +15,25 @@ type TcpServerer interface {
 }
 
 type TcpServer struct {
-	host      string
-	port      int
-	users     map[string]*User
-	mutexMap  sync.Mutex
-	listener  net.Listener
-	chEvents  chan *Event
-	isRunning bool
+	host        string
+	port        int
+	users       map[string]*User
+	mutexMap    sync.Mutex
+	listener    net.Listener
+	chEvents    chan *Event
+	done        chan bool
+	tickerUsers *time.Ticker
 }
 
 func NewTcpServer(host string, port int, events chan *Event) *TcpServer {
 	return &TcpServer{
-		host:      host,
-		port:      port,
-		users:     make(map[string]*User),
-		mutexMap:  sync.Mutex{},
-		chEvents:  events,
-		isRunning: false,
+		host:        host,
+		port:        port,
+		users:       make(map[string]*User),
+		mutexMap:    sync.Mutex{},
+		chEvents:    events,
+		tickerUsers: time.NewTicker(5 * time.Second),
+		done:        make(chan bool),
 	}
 }
 
@@ -44,20 +46,23 @@ func (t *TcpServer) DispatchEvent(message string, isAnError bool, level int) {
 func (t *TcpServer) dispatchUserStatus() {
 
 	go func() {
-		for t.isRunning {
-			var userStatus []string
-			for _, user := range t.Users() {
-				if user.IsOnLine() {
-					userStatus = append(userStatus, fmt.Sprintf("\n %s is online, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
-				} else {
-					userStatus = append(userStatus, fmt.Sprintf("\n %s is offline, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
+		for {
+			select {
+			case <-t.done:
+				return
+			case _ = <-t.tickerUsers.C:
+				var userStatus []string
+				for _, user := range t.Users() {
+					if user.IsOnLine() {
+						userStatus = append(userStatus, fmt.Sprintf("\n %s is online, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
+					} else {
+						userStatus = append(userStatus, fmt.Sprintf("\n %s is offline, last Login: %s", user.Username, user.LastLogin.Format(time.RFC1123)))
+					}
 				}
+				t.DispatchEvent(fmt.Sprintf("Users status:%s \n", userStatus), false, 1)
 			}
-			t.DispatchEvent(fmt.Sprintf("Users status:%s \n", userStatus), false, 1)
-			time.Sleep(5 * time.Second)
 		}
 	}()
-
 }
 
 func (t *TcpServer) StartInAThread() error {
@@ -79,7 +84,6 @@ func (t *TcpServer) Start() error {
 	t.listener = listener
 
 	t.DispatchEvent(fmt.Sprintf("Server started at %s", address), false, 2)
-	t.isRunning = true
 	t.dispatchUserStatus()
 	for {
 		conn, err := listener.Accept()
@@ -95,7 +99,11 @@ func (t *TcpServer) Start() error {
 }
 
 func (t *TcpServer) Stop() error {
+
+	t.done <- true
+	t.tickerUsers.Stop()
 	return t.listener.Close()
+
 }
 
 func (t *TcpServer) handleConnection(conn net.Conn) {
