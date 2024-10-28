@@ -5,6 +5,7 @@ import (
 	"bytes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Protocol", func() {
@@ -18,7 +19,7 @@ var _ = Describe("Protocol", func() {
 			Expect(wr.Flush()).To(Succeed())
 
 			Expect(buff.Bytes()).To(Equal([]byte{
-				0x00, 0x02, // version
+				0x02,       // version
 				0x00, 0x01, // command
 			}))
 		})
@@ -26,7 +27,7 @@ var _ = Describe("Protocol", func() {
 		It("can decode a binary sequence", func() {
 			header := &ChatHeader{}
 			byteSequence := []byte{
-				0x00, 0x02, // version
+				0x02,       // version
 				0x00, 0x01, // command
 			}
 
@@ -93,7 +94,7 @@ var _ = Describe("Protocol", func() {
 
 	Context("CommandMessage", func() {
 		It("has the correct attributes", func() {
-			msg := NewCommandMessageWithCorrelationId("hello", "from", "to", 55)
+			msg := NewCommandMessageWithCorrelationId("hello", "from", "to", 55, ConvertTimeToUint64(time.Now()))
 			Expect(msg.Message).To(Equal("hello"))
 			Expect(msg.From).To(Equal("from"))
 			Expect(msg.To).To(Equal("to"))
@@ -112,6 +113,7 @@ var _ = Describe("Protocol", func() {
 			byteSequence = append(byteSequence, []byte("from")...)
 			byteSequence = append(byteSequence, 0x00, 0x02) // uint 16 to len
 			byteSequence = append(byteSequence, []byte("to")...)
+			byteSequence = append(byteSequence, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a) // time
 
 			buff := bytes.NewReader(byteSequence)
 			Expect(msg.Read(bufio.NewReader(buff))).To(Succeed())
@@ -121,12 +123,13 @@ var _ = Describe("Protocol", func() {
 		})
 
 		It("can return the size needed to encode the frame", func() {
-			msg := NewCommandMessageWithCorrelationId("hello", "from", "to", 1)
+			msg := NewCommandMessageWithCorrelationId("hello", "from", "to", 1, 10)
 			expectedSize :=
 				4 + // correlation ID
 					2 + 5 + // uint16 for the message string  + uint32 message string length
 					2 + 4 + // from uint16 for the to string  + uint32 to string length
-					2 + 2 // to uint16 for the to string  + uint32 to string length
+					2 + 2 + // to uint16 for the to string  + uint32 to string length
+					8 // time
 
 			Expect(msg.SizeNeeded()).To(Equal(expectedSize))
 
@@ -143,6 +146,7 @@ var _ = Describe("Protocol", func() {
 				0x66, 0x72, 0x6f, 0x6d, // from
 				0x00, 0x02, // uint 16 to len
 				0x74, 0x6f, // to
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
 			}))
 		})
 	})
@@ -177,7 +181,7 @@ var _ = Describe("Protocol", func() {
 
 		It("Header + CommandMessage should encode and decode ", func() {
 
-			msg := NewCommandMessageWithCorrelationId("hello", "user_from", "user_to", 14)
+			msg := NewCommandMessageWithCorrelationId("hello", "user_from", "user_to", 14, 10)
 
 			buff := &bytes.Buffer{}
 			writer := bufio.NewWriter(buff)

@@ -45,7 +45,10 @@ func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Wr
 	if err != nil {
 		return err
 	}
-	if (bWritten + hWritten) != (request.SizeNeeded() + writtenLength) {
+
+	// Here we check if all bytes we except to write are written correctly
+	// there is the header, the command and the length of the buffer ( 4 bytes )
+	if (bWritten + hWritten + writtenLength) != (request.SizeNeeded() + hr.SizeNeeded() + 4) {
 		panic("WriteTo Command: Not all bytes written")
 	}
 	return writer.Flush()

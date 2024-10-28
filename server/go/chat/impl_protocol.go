@@ -46,7 +46,7 @@ func (l *CommandLogin) CorrelationId() uint32 {
 	return l.correlationId
 }
 
-func (l *CommandLogin) Version() int16 {
+func (l *CommandLogin) Version() byte {
 	return Version1
 }
 
@@ -103,7 +103,7 @@ func (m *CommandMessage) SetCorrelationId(id uint32) {
 	m.correlationId = id
 }
 
-func (m *CommandMessage) Version() int16 {
+func (m *CommandMessage) Version() byte {
 	return Version1
 }
 
@@ -114,15 +114,15 @@ func (m *CommandMessage) Write(writer *bufio.Writer) (int, error) {
 // ChatHeader is the header of the chat protocol.
 type ChatHeader struct {
 	// total size of this header + command content
+	version byte   // 1 byte
 	command uint16 // 2 bytes
-	version int16  // 2 bytes
 }
 
 func NewChatHeaderFromCommand(command internal.CommandWrite) *ChatHeader {
 	return &ChatHeader{command: command.Key(), version: command.Version()}
 }
 
-func NewChatHeader(version int16, command uint16) *ChatHeader {
+func NewChatHeader(version byte, command uint16) *ChatHeader {
 	return &ChatHeader{command: command, version: version}
 }
 
@@ -138,7 +138,7 @@ func (c *ChatHeader) Key() uint16 {
 	return c.command
 }
 
-func (c *ChatHeader) Version() int16 {
+func (c *ChatHeader) Version() byte {
 	return c.version
 }
 
@@ -160,7 +160,7 @@ func (g *GenericResponse) SizeNeeded() int {
 		chatProtocolSizeUint16 // responseCode
 }
 
-func (g *GenericResponse) Version() int16 {
+func (g *GenericResponse) Version() byte {
 	return Version1
 }
 

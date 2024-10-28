@@ -10,7 +10,7 @@ type CommandWrite interface {
 	// SizeNeeded must return the size required to encode this CommandWrite
 	// plus the size of the Header. The size of the Header is always 4 bytes
 	SizeNeeded() int
-	Version() int16
+	Version() byte
 }
 
 // SyncCommandWrite is the interface that wraps the WriteTo method.

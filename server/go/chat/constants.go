@@ -4,9 +4,9 @@ const (
 	CommandLoginKey    uint16 = 0x01
 	CommandMessageKey  uint16 = 0x02
 	GenericResponseKey uint16 = 0x03
-	Version1           int16  = 1
+	Version1           byte   = 1
 
-	chatProtocolHeaderSizeBytes = chatProtocolVersionSizeBytes + // version
+	chatProtocolHeaderSizeBytes = chatProtocolVersionSizeByte + // version
 		chatProtocolKeySizeBytes // command
 	chatProtocolKeySizeBytes       = 2
 	chatProtocolKeySizeUint8       = 1
@@ -14,7 +14,7 @@ const (
 	chatProtocolKeySizeInt         = 4
 	chatProtocolStringLenSizeBytes = 2
 
-	chatProtocolVersionSizeBytes       = 2
+	chatProtocolVersionSizeByte        = 1
 	chatProtocolCorrelationIdSizeBytes = 4
 	chatProtocolUint32                 = 4
 	chatProtocolUint64                 = 8

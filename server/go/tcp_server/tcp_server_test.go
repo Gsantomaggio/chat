@@ -59,8 +59,7 @@ var _ = Describe("Tcp Server", func() {
 			done := make(chan bool)
 			receiver1 := make(chan *chat.CommandMessage)
 			go func() {
-				for {
-					msg := <-receiver1
+				for msg := range receiver1 {
 					Expect(msg).NotTo(BeNil())
 					Expect(msg.From).To(Equal("user2"))
 					Expect(msg.Message).To(Equal("Hello"))
