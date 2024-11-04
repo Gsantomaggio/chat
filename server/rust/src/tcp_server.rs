@@ -1,15 +1,32 @@
 use std::error::Error;
+use std::ptr::write;
+use byteorder::BigEndian;
 use bytes::BytesMut;
 // use tokio::net::{TcpListener, TcpStream};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
+use crate::codec::{Decoder, Encoder};
+use crate::commands::login::{LoginRequest, LoginResponse};
+use crate::response::response::{Response, ResponseCode};
+use crate::response::response::ResponseKind::Login;
+use crate::types::Header;
+use crate::types::version::{COMMAND_LOGIN, GENERIC_RESPONSE, PROTOCOL_VERSION};
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct TcpServer {}
+pub struct User {
+    pub(crate) user_name: String,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct TcpServer {
+    pub(crate) users: Vec<User>,
+}
 
 impl TcpServer {
     pub fn new() -> TcpServer {
-        TcpServer {}
+        TcpServer {
+            users: Vec::new()
+        }
     }
 
     pub async fn start(&self) -> std::io::Result<()> {
@@ -30,6 +47,8 @@ impl TcpServer {
 async fn handle_client(mut socket: TcpStream) -> Result<(), Box<dyn Error>> {
     let (reader, mut writer) = socket.split();
     let mut reader = BufReader::new(reader);
+    // let mut writer = BufWriter::new(writer);
+
 
     loop {
         let mut buffer = BytesMut::new();
@@ -42,16 +61,31 @@ async fn handle_client(mut socket: TcpStream) -> Result<(), Box<dyn Error>> {
         buffer.resize(len, 0);
         reader.read_exact(&mut buffer).await?;
 
-        let data = buffer.freeze();
-        let message = String::from_utf8_lossy(&data);
-
-        println!("Received: {}", message);
-
-        // Respond to the client (optional)
-        writer.write_all(b"Data received\r\n").await?;
+        let (h, hq) = Header::decode(&buffer).unwrap();
+        match hq.key()
+        {
+            COMMAND_LOGIN => {
+                let (_, login) = LoginRequest::decode(h).unwrap();
+                println!("Logged{}", login.user_name);
+                users
+                let response = Response::new(
+                    Header::new(PROTOCOL_VERSION, GENERIC_RESPONSE),
+                    Login(LoginResponse::new(login.correlation_id, ResponseCode::Ok)),
+                );
+                writer.write_all(response_buffer(&response).await.unwrap().as_slice()).await?;
+            }
+            _ => {
+                println!("error");
+            }
+        }
         writer.flush().await?;
-
-        // Check for connection closure.  If the read_exact fails, it indicates a closed connection.
-        // You might handle this with a `break` or other error handling strategy.
     }
+}
+
+async fn response_buffer(response: &Response) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut writer_tmp = Vec::new();
+    writer_tmp.write_u32(response.encoded_size()).await?;
+    response.encode(&mut writer_tmp).unwrap();
+    writer_tmp.flush().await?;
+    Ok(writer_tmp)
 }

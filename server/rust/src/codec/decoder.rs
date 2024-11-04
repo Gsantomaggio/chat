@@ -96,10 +96,10 @@ impl Decoder for Vec<u64> {
 
 impl Decoder for Header {
     fn decode(input: &[u8]) -> Result<(&[u8], Self), crate::error::DecodeError> {
-        let (input, key) = read_u16(input)?;
         let (input, version) = read_u8(input)?;
+        let (input, key) = read_u16(input)?;
 
-        Ok((input, Header::new(extract_response_code(key), version)))
+        Ok((input, Header::new(version, extract_response_code(key))))
     }
 }
 

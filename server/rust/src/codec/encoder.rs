@@ -91,13 +91,12 @@ impl Encoder for i64 {
 
 impl Encoder for Header {
     fn encoded_size(&self) -> u32 {
-        2 + 2
+        1 + 2
     }
 
     fn encode(&self, writer: &mut impl Write) -> Result<(), EncodeError> {
-        writer.write_u16::<BigEndian>(self.key())?;
         writer.write_u8(self.version())?;
-
+        writer.write_u16::<BigEndian>(self.key())?;
         Ok(())
     }
 }
