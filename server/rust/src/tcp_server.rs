@@ -1,9 +1,7 @@
 use std::error::Error;
-use std::ptr::write;
-use byteorder::BigEndian;
 use bytes::BytesMut;
 // use tokio::net::{TcpListener, TcpStream};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, WriteHalf};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use crate::codec::{Decoder, Encoder};
 use crate::commands::login::{LoginRequest, LoginResponse};
@@ -18,24 +16,45 @@ pub struct User {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct TcpServer {
+pub struct Users {
     pub(crate) users: Vec<User>,
+}
+
+impl Users {
+    pub fn push(&mut self, user: User) {
+        self.users.push(user);
+    }
+}
+
+
+impl Users {
+    pub fn new() -> Users {
+        Users {
+            users: Vec::new()
+        }
+    }
+}
+
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct TcpServer {
+    pub(crate) users: Users,
 }
 
 impl TcpServer {
     pub fn new() -> TcpServer {
         TcpServer {
-            users: Vec::new()
+            users: Users::new()
         }
     }
 
-    pub async fn start(&self) -> std::io::Result<()> {
+    pub async fn start(&mut self) -> std::io::Result<()> {
         let listener = TcpListener::bind("127.0.0.1:5555").await?;
         println!("Server listening on 127.0.0.1:5555");
         loop {
-            let (mut socket, _) = listener.accept().await?;
+            let (socket, _) = listener.accept().await?;
             tokio::spawn(async move {
-                if let Err(e) = handle_client(socket).await {
+                if let Err(e) = handle_client(socket, &self.users).await {
                     println!("Error handling client: {}", e);
                 }
             });
@@ -43,13 +62,9 @@ impl TcpServer {
     }
 }
 
-
-async fn handle_client(mut socket: TcpStream) -> Result<(), Box<dyn Error>> {
+async fn handle_client(mut socket: TcpStream,  users: &Users) -> Result<(), Box<dyn Error>> {
     let (reader, mut writer) = socket.split();
     let mut reader = BufReader::new(reader);
-    // let mut writer = BufWriter::new(writer);
-
-
     loop {
         let mut buffer = BytesMut::new();
         let mut len_bytes = [0u8; 4];
@@ -61,25 +76,33 @@ async fn handle_client(mut socket: TcpStream) -> Result<(), Box<dyn Error>> {
         buffer.resize(len, 0);
         reader.read_exact(&mut buffer).await?;
 
-        let (h, hq) = Header::decode(&buffer).unwrap();
-        match hq.key()
-        {
-            COMMAND_LOGIN => {
-                let (_, login) = LoginRequest::decode(h).unwrap();
-                println!("Logged{}", login.user_name);
-                users
-                let response = Response::new(
-                    Header::new(PROTOCOL_VERSION, GENERIC_RESPONSE),
-                    Login(LoginResponse::new(login.correlation_id, ResponseCode::Ok)),
-                );
-                writer.write_all(response_buffer(&response).await.unwrap().as_slice()).await?;
+        match Header::decode(&buffer) {
+            Err(e) => {
+                println!("Error decoding header: {:?}", e);
+                break;
             }
-            _ => {
-                println!("error");
+            Ok(v) => {
+                let (h, hq) = v;
+                match hq.key() {
+                    COMMAND_LOGIN => {
+                        let (_, login) = LoginRequest::decode(h).unwrap();
+                        println!("Logged{}", login.user_name);
+                        let response = Response::new(
+                            Header::new(PROTOCOL_VERSION, GENERIC_RESPONSE),
+                            Login(LoginResponse::new(login.correlation_id, ResponseCode::Ok)),
+                        );
+                        writer.write_all(response_buffer(&response).await.unwrap().as_slice()).await?;
+                    }
+                    _ => {
+                        println!("error");
+                        break;
+                    }
+                }
             }
-        }
+        };
         writer.flush().await?;
     }
+    Ok(())
 }
 
 async fn response_buffer(response: &Response) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -89,3 +112,7 @@ async fn response_buffer(response: &Response) -> Result<Vec<u8>, Box<dyn Error>>
     writer_tmp.flush().await?;
     Ok(writer_tmp)
 }
+
+
+
+

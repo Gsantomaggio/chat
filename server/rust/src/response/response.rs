@@ -2,7 +2,7 @@ use std::io::Write;
 use crate::codec::{Decoder, Encoder};
 use crate::codec::decoder::read_u16;
 use crate::commands::login::LoginResponse;
-use crate::error::{DecodeError, EncodeError};
+use crate::error::{EncodeError};
 use crate::types::Header;
 
 #[derive(Debug, PartialEq, Eq)]
