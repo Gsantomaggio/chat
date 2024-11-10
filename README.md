@@ -6,11 +6,11 @@ This project's scope is only to learn how to write a client-server application f
 The code is demonstrative and focuses more on understanding how the TCP works than production code.
 The client applications are meant to test the server quickly.
 
-We provide complete examples in the following languages:
+We provide examples in the following languages:
 
-- Server golang (server/go)
-- Client golang (server/go/tcp_client)
-- ..... ???
+- Server [golang](./server/go) [Full features]
+- Client [golang](./server/go/tcp_client) [Full features]
+- Server [rust](./server/rust) [Partial features]
 
 ### How to run the golang stack:
 
@@ -142,6 +142,8 @@ You must be sure to provide a unique `correlationId` for each command sent.
 - [x] Store in memory the users with the status (online/offline)
 - [x] Store in memory the off-line messages when the user is not online
 - [x] Send the off-line messages when the user logs in
+- [x] Check if the user is already logged in
+- [x] Check if the destination user exists
 
 ### Server Side Nice to have Features
 

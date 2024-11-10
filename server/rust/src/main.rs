@@ -53,18 +53,15 @@ struct TokioConnection {
 #[tokio::main]
 async fn main() -> IOResult<()> {
     let addr = "0.0.0.0:5555";
-    // let freq_map = Arc::new(WriteHalf::new(HashMap::new()));
     // Start logging.
     femme::start();
 
-    // Bind to the addr & listen.
     let listener = TcpListener::bind(addr).await?;
 
-    // Create broadcast channel.
     let connections: Arc<DashMap<String, Arc<TokioConnection>>> = Arc::new(DashMap::new());
     // Server infinite loop.
     loop {
-        info!("Listening for new connections");
+        info!("Listening for new connections, address: {}", addr);
 
         // Accept incoming connections.
         let (client_tcp_stream, _) = listener.accept().await?;

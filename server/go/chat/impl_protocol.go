@@ -62,7 +62,7 @@ func (l *CommandLogin) Read(reader *bufio.Reader) error {
 
 type CommandMessage struct {
 	correlationId uint32
-	Message       string
+	Message       string // payload would be better as a name
 	From          string
 	To            string
 	Time          uint64
