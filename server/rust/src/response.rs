@@ -1,9 +1,7 @@
 use std::io::Write;
-use crate::codec::{Decoder, Encoder};
-use crate::codec::decoder::read_u16;
-use crate::commands::login::LoginResponse;
-use crate::error::{EncodeError};
-use crate::types::Header;
+use crate::login::LoginResponse;
+use crate::response::responses::RESPONSE_CODE_OK;
+use crate::types::{read_u16, DecodeError, Decoder, EncodeError, Encoder, Header};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response {
@@ -11,20 +9,17 @@ pub struct Response {
     pub(crate) kind: ResponseKind,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[repr(u16)]
-pub enum ResponseCode {
-    Ok = 1,
-    UserNotFound = 2,
-    UserAlreadyLogged = 3,
+pub mod responses {
+    pub const RESPONSE_CODE_OK: u16 = 1;
 }
 
 
-
-impl ResponseCode {
-    fn to_u16(self) -> u16 {
-        self as u16
-    }
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[repr(u16)]
+pub enum ResponseCode {
+    Ok = 0x01,
+    UserNotFound = 0x03,
+    UserAlreadyLogged = 0x04,
 }
 
 
@@ -33,18 +28,45 @@ pub enum ResponseKind {
     Login(LoginResponse),
 }
 
-
 impl Decoder for ResponseCode {
-    fn decode(input: &[u8]) -> Result<(&[u8], Self), crate::error::DecodeError> {
+    fn decode(input: &[u8]) -> Result<(&[u8], Self), DecodeError> {
         let (input, code) = read_u16(input)?;
         Ok((input, code.try_into()?))
     }
 }
 
+impl ResponseCode {
+    fn to_u16(self) -> u16 {
+        self as u16
+    }
+}
+
+impl TryFrom<u16> for ResponseCode {
+    type Error = DecodeError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            RESPONSE_CODE_OK => Ok(ResponseCode::Ok),
+            _ => Ok(ResponseCode::Ok)
+        }
+    }
+}
+
+impl From<&ResponseCode> for u16 {
+    fn from(code: &ResponseCode) -> Self {
+        match code {
+            ResponseCode::Ok => RESPONSE_CODE_OK,
+            _ => { RESPONSE_CODE_OK }
+        }
+    }
+}
+
+
 impl Response {
     pub fn new(header: Header, kind: ResponseKind) -> Self {
         Self { header, kind }
     }
+
 
     pub fn correlation_id(&self) -> Option<u32> {
         match &self.kind {
@@ -58,6 +80,7 @@ impl Response {
         }
     }
 }
+
 
 impl Encoder for Response {
     fn encoded_size(&self) -> u32 {
@@ -73,6 +96,3 @@ impl Encoder for Response {
         Ok(())
     }
 }
-
-
-

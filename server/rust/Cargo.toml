@@ -1,9 +1,15 @@
 [package]
-name = "rust"
+name = "tcp-chat-server"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-byteorder = "1"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "*", features = ["full"] }
+femme = { version = "*" }
+log = { version = "*" }
+r3bl_tui = { version = "*" }
+r3bl_rs_utils_core = { version = "*" }
+time = {version = "0.3.36"}
 bytes = "1.8.0"
+byteorder = "1.5.0"
+dashmap = "6.1.0"
