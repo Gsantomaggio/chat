@@ -75,8 +75,8 @@ All the commands will have a response with the following structure:
 | Name                     | value(s) | 
 |--------------------------|----------|
 | `OK`                     | 0x01     |
-| `ErrorUserNotFound`      | 0x02     |
-| `ErrorUserAlreadyLogged` | 0x03     |
+| `ErrorUserNotFound`      | 0x03     |
+| `ErrorUserAlreadyLogged` | 0x04     |
 
 
 ### Write data to the socket
