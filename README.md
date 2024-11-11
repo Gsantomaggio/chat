@@ -100,7 +100,7 @@ For Example: `CommandLogin` with username `user1`
 0x01 =>  version  (1 byte)
 0x00 0x01  => command ( 2 bytes)
 0x00 0x00 0x00 0x01  => correlationId (4 bytes) 
-0x00 0x01 => username  length  (2 bytes)
+0x00 0x05 => username  length  (2 bytes)
 0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes)
 ```
 - Total bytes written: 14 + 4 = 20
