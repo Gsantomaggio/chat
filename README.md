@@ -103,7 +103,7 @@ For Example: `CommandLogin` with username `user1`
 0x00 0x05 => username  length  (2 bytes)
 0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes)
 ```
-- Total bytes written: 14 + 4 = 20
+- Total bytes written: 14 + 4 = 18
 - Send the message
 - Read the `Response`
 
