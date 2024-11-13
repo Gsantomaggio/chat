@@ -102,15 +102,14 @@ In this case the client will:
 - write the `header` + `message`:
 
 ```
-0x00 0x00 0x00 0x0E (4 bytes for the `uint32`)
-0x01 =>  version  (1 byte)
-0x00 0x01  => command ( 2 bytes)
-0x00 0x00 0x00 0x01  => correlationId (4 bytes)
-0x00 0x01 => username  length  (2 bytes)
-0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes)
+0x00 0x00 0x00 0x0E (`uint32`)  
+0x01 =>  version  (1 byte)  
+0x00 0x01  => command (`uint16`)  
+0x00 0x00 0x00 0x01  => correlationId (`uint32`)  
+0x00 0x05 => username  length  (`uint16`)  
+0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes) 
 ```
-
-- Total bytes written: 14 + 4 = 20
+- Total bytes written: 14 (body)  + 4 (len of body) = 18
 - Send the message
 - Read the `Response`
 
