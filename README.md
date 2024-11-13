@@ -42,8 +42,8 @@ The protocol is a binary protocol with the following structure:
 
 | Name            | Type     | value(s) | reference         |
 | --------------- | -------- | -------- | ----------------- |
-| `key`           | `uint16` | 0x01     | `Header::command` |
 | `version`       | `byte`   | 0x01     | `Header::version` |
+| `key`           | `uint16` | 0x01     | `Header::command` |
 | `correlationId` | `uint32` |          |                   |
 | `username`      | `string` |          |                   |
 
@@ -51,8 +51,8 @@ The protocol is a binary protocol with the following structure:
 
 | Name            | Type     | value(s) | reference         |
 | --------------- | -------- | -------- | ----------------- |
-| `key`           | `uint16` | 0x02     | `Header::command` |
 | `version`       | `byte`   | 0x01     | `Header::version` |
+| `key`           | `uint16` | 0x02     | `Header::command` |
 | `correlationId` | `uint32` |          |                   |
 | `message`       | `string` |          |                   |
 | `From`          | `string` |          |                   |
@@ -65,8 +65,8 @@ All the commands will have a response with the following structure:
 
 | Name            | Type     | value(s) | reference         |
 | --------------- | -------- | -------- | ----------------- |
-| `key`           | `uint16` | 0x03     | `Header::command` |
 | `version`       | `byte`   | 0x01     | `Header::version` |
+| `key`           | `uint16` | 0x03     | `Header::command` |
 | `correlationId` | `uint32` |          |                   |
 | `code`          | `uint16` |          | `ResponseCodes`   |
 

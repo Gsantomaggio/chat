@@ -72,15 +72,19 @@ const createResponse = (correlationId, code) => {
   buffer.writeUInt32BE(0x09, offset);
   offset += 4;
 
-  buffer.writeUInt16BE(0x03, offset);
-  offset += 2;
-
+  // write  version 
   buffer.writeUInt8(0x01, offset);
   offset += 1;
 
+  // write the command id: 0x03 == reponse
+  buffer.writeUInt16BE(0x03, offset);
+  offset += 2;
+
+  // send back the correlation id
   buffer.writeUInt32BE(correlationId, offset);
   offset += 4;
 
+  // response code  
   buffer.writeUInt16BE(code, offset);
 
   return buffer;
