@@ -1,8 +1,22 @@
 import { Buffer } from "node:buffer";
+import createDebug from "debug";
+const debug = createDebug("protocol");
 
 const SIZE_BYTES_COUNT = 4;
 const HEADER_BYTES_COUNT = 3;
 const COMMAND_OFFSET = SIZE_BYTES_COUNT + HEADER_BYTES_COUNT;
+
+const COMMAND_CODES = {
+  LOGIN: 0x01,
+  MESSAGE: 0x02,
+};
+
+const RESPONSE_CODES = {
+  OK: 0x01,
+  // ???: =0x02,
+  USER_NOT_FOUND: 0x03,
+  USER_ALREADY_LOGGED: 0x04,
+};
 
 const readMessangeLength = (buffer) => {
   return buffer.readUInt32BE();
@@ -72,7 +86,7 @@ const createResponse = (correlationId, code) => {
   buffer.writeUInt32BE(0x09, offset);
   offset += 4;
 
-  // write  version 
+  // write  version
   buffer.writeUInt8(0x01, offset);
   offset += 1;
 
@@ -84,7 +98,7 @@ const createResponse = (correlationId, code) => {
   buffer.writeUInt32BE(correlationId, offset);
   offset += 4;
 
-  // response code  
+  // response code
   buffer.writeUInt16BE(code, offset);
 
   return buffer;
@@ -94,6 +108,8 @@ export {
   SIZE_BYTES_COUNT,
   HEADER_BYTES_COUNT,
   COMMAND_OFFSET,
+  RESPONSE_CODES,
+  COMMAND_CODES,
   readMessangeLength,
   readHeader,
   readCommandLoginBody,

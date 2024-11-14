@@ -1,13 +1,39 @@
 import net from "node:net";
+import createDebug from "debug";
+const debug = createDebug("server");
 import {
+  COMMAND_CODES,
   createResponse,
   readCommandLoginBody,
   readCommandMessageBody,
   readHeader,
   readMessangeLength,
+  RESPONSE_CODES,
 } from "./protocol.mjs";
 
 const users = {};
+const mailboxes = {};
+
+const setUserOnline = (username, socketId) => {
+  users[username] = { socketId, status: "online" };
+  if (!mailboxes[username]) {
+    mailboxes[username] = [];
+  }
+  console.log(JSON.stringify(users));
+};
+const setUserOffline = (username) => {
+  users[username].status = "offline";
+};
+const isUserOnline = (username) =>
+  Object.keys(users).find(
+    (u) => u.username === username && u.status === "online"
+  );
+
+const queueMessage = (from, to, message, time) => {
+  mailboxes[to].push({ from, message, time });
+};
+const getUsernameFromSocketId = (socketId) =>
+  Object.keys(users).find((key) => users[key].socketId === socketId);
 
 const getSocketId = (socket) => {
   return `${socket.remoteAddress}:${socket.remotePort}`;
@@ -20,76 +46,71 @@ const server = net.createServer((socket) => {
   //TODO: check for bytes read to match the expected length (at least)
   socket.on("data", (data) => {
     const bytesToRead = readMessangeLength(data);
+    debug(`Bytes to read are ${bytesToRead} and data is ${data.length} bytes`);
 
-    console.log(
-      `Bytes to read are ${bytesToRead} and data is ${data.length} bytes`
-    );
+    const { command, version } = readHeader(data);
+    debug(`Received header with command ${command} and version ${version}`);
 
-    const header = readHeader(data);
+    if (command === COMMAND_CODES.LOGIN) {
+      const { username, correlationId } = readCommandLoginBody(data);
+      setUserOnline(username, socketId);
+      console.log(`User ${username} is now online`);
 
-    console.log(`received header is ${JSON.stringify(header)}`);
-
-    let body;
-    if (header.command === 0x01) {
-      body = readCommandLoginBody(data);
-      users[body.username] = { socketId, status: "online" };
-      console.log(`User ${body.username} is now online`);
-      console.log(`CorrelationId is ${body.correlationId}`);
-      const response = createResponse(body.correlationId, 0x01);
+      const response = createResponse(correlationId, RESPONSE_CODES.OK);
       socket.write(response);
-      console.log("Response sent:", response);
-    } else if (header.command === 0x02) {
-      body = readCommandMessageBody(data);
+      debug(`Login response sent: ${response.toString("hex")}`);
 
-      // Verifica che nel campo From ci sia lo username che corrisponde all'utente attualmente connesso sul socket
-      if (users[body.from] && users[body.from].socketId === socketId) {
-        // Verifica che nel campo To ci sia lo username di un utente presente nell'array users
-        if (users[body.to]) {
-          console.log(
-            `Message from ${body.from} to ${body.to} at ${body.time}: ${body.message}`
-          );
+      //TODO: send archived messages;
+    } else if (command === COMMAND_CODES.MESSAGE) {
+      const { to, from, message, time, correlationId } =
+        readCommandMessageBody(data);
 
-          // Invia il messaggio al destinatario
-          const recipientSocketId = users[body.to].socketId;
-          const recipientSocket = server.connections.find(
-            (conn) => getSocketId(conn) === recipientSocketId
-          );
-          if (recipientSocket) {
-            recipientSocket.write(body.message);
-          }
-
-          // Costruisce la risposta
-          const response = createResponse(body.correlationId, 0); // Utilizziamo il codice 0 per indicare successo
-
-          // Invia la risposta al client
-          socket.write(response);
-        } else {
-          console.error(`User ${body.to} not found`);
-          // Costruisce la risposta con codice di errore
-          const response = createResponse(body.correlationId, 0x03); // Utilizziamo il codice 0x03 per indicare utente non trovato
-          socket.write(response);
-        }
-      } else {
-        console.error(`Invalid From field: ${body.from}`);
-        // Costruisce la risposta con codice di errore
-        const response = createResponse(body.correlationId, 0x02); // Utilizziamo il codice 0x02 per indicare errore di autenticazione
+      /*
+      // NOT REQUESTED FROM SPEC
+      const isFromCurrentUser =
+        users[from] && users[from].socketId === socketId;
+      if (!isFromCurrentUser) {
+        console.error(`Invalid From field: ${from}`);
+        const response = createResponse(correlationId, 0x02);
         socket.write(response);
+        return;
       }
+      */
+
+      const recipientExists = users[to];
+      if (!recipientExists) {
+        console.error(`User ${to} not found`);
+        const response = createResponse(
+          correlationId,
+          RESPONSE_CODES.USER_NOT_FOUND
+        );
+        socket.write(response);
+        debug(`Message response sent: ${response.toString("hex")}`);
+      }
+
+      if (isUserOnline(users[to])) {
+        const recipientSocketId = users[to].socketId;
+        const recipientSocket = server.connections.find(
+          (conn) => getSocketId(conn) === recipientSocketId
+        );
+        //TODO: send structured message
+        recipientSocket.write(message);
+      } else {
+        queueMessage(from, to, message, time);
+      }
+      const response = createResponse(correlationId, RESPONSE_CODES.OK);
+      socket.write(response);
+      debug(`Message response sent: ${response.toString("hex")}`);
     } else {
-      // TODO: throw Unsupported Error
+      console.error(`Command not supported: ${command}`);
     }
-    console.log("Received message:", { header, body });
   });
 
   socket.on("end", () => {
-    const username = Object.keys(users).find(
-      (key) => users[key].socketId === socketId
-    );
-    if (username) {
-      users[username].status = "offline";
-      console.log(`User ${username} is now offline`);
-    }
-    console.log(`Client disconnected: ${socketId}`);
+    const username = getUsernameFromSocketId(socketId);
+    setUserOffline(username);
+    console.log(`User ${username} is now offline`);
+    debug(`Client disconnected: ${socketId}`);
   });
 
   socket.on("error", (err) => {
