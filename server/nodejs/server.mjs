@@ -10,9 +10,11 @@ import {
   readMessangeLength,
   RESPONSE_CODES,
 } from "./protocol.mjs";
+import { socketToId, getSocketsExcluding } from "./utils.mjs";
 
 const users = {};
 const mailboxes = {};
+let sockets = [];
 
 const setUserOnline = (username, socketId) => {
   users[username] = { socketId, status: "online" };
@@ -24,23 +26,23 @@ const setUserOnline = (username, socketId) => {
 const setUserOffline = (username) => {
   users[username].status = "offline";
 };
-const isUserOnline = (username) =>
-  Object.keys(users).find(
-    (u) => u.username === username && u.status === "online"
-  );
+const isUserOnline = (username) => {
+  if (!users[username]) {
+    return false;
+  }
+  debug(`${username} found`);
+  return users[username].status === "online";
+};
 
-const queueMessage = (from, to, message, time) => {
-  mailboxes[to].push({ from, message, time });
+const queueMessage = (to, cmdMsgBuf) => {
+  mailboxes[to].push(cmdMsgBuf);
 };
 const getUsernameFromSocketId = (socketId) =>
   Object.keys(users).find((key) => users[key].socketId === socketId);
 
-const getSocketId = (socket) => {
-  return `${socket.remoteAddress}:${socket.remotePort}`;
-};
-
 const server = net.createServer((socket) => {
-  const socketId = getSocketId(socket);
+  sockets.push(socket);
+  const socketId = socketToId(socket);
   console.log(`Client connected: ${socketId}`);
 
   //TODO: check for bytes read to match the expected length (at least)
@@ -60,7 +62,12 @@ const server = net.createServer((socket) => {
       socket.write(response);
       debug(`Login response sent: ${response.toString("hex")}`);
 
-      //TODO: send archived messages;
+      //TODO: improve
+      mailboxes[username].forEach((cmdMsgBuf) => {
+        socket.write(cmdMsgBuf);
+      });
+      mailboxes[username] = [];
+      // ---
     } else if (command === COMMAND_CODES.MESSAGE) {
       const { to, from, message, time, correlationId } =
         readCommandMessageBody(data);
@@ -86,17 +93,20 @@ const server = net.createServer((socket) => {
         );
         socket.write(response);
         debug(`Message response sent: ${response.toString("hex")}`);
+        return;
       }
 
-      if (isUserOnline(users[to])) {
+      debug(JSON.stringify(users));
+      if (isUserOnline(to)) {
+        debug(`${to} is online`);
         const recipientSocketId = users[to].socketId;
-        const recipientSocket = server.connections.find(
-          (conn) => getSocketId(conn) === recipientSocketId
+        const recipientSocket = sockets.find(
+          (s) => socketToId(s) === recipientSocketId
         );
-        //TODO: send structured message
-        recipientSocket.write(message);
+        recipientSocket.write(data); //hack OR perf, choose one
       } else {
-        queueMessage(from, to, message, time);
+        debug(`${to} is offline`);
+        queueMessage(to, data);
       }
       const response = createResponse(correlationId, RESPONSE_CODES.OK);
       socket.write(response);
@@ -107,6 +117,7 @@ const server = net.createServer((socket) => {
   });
 
   socket.on("end", () => {
+    sockets = getSocketsExcluding(sockets, socket);
     const username = getUsernameFromSocketId(socketId);
     setUserOffline(username);
     console.log(`User ${username} is now offline`);

@@ -105,9 +105,6 @@ const createResponse = (correlationId, code) => {
 };
 
 export {
-  SIZE_BYTES_COUNT,
-  HEADER_BYTES_COUNT,
-  COMMAND_OFFSET,
   RESPONSE_CODES,
   COMMAND_CODES,
   readMessangeLength,
