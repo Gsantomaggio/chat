@@ -7,6 +7,8 @@ import (
 	"gsantomaggio/chat/server/chat"
 	"gsantomaggio/chat/server/tcp_client"
 	"os"
+	"sync"
+	"time"
 )
 
 func main() {
@@ -54,6 +56,7 @@ func main() {
 	fmt.Printf("Login %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 
 	for {
+		time.Sleep(500 * time.Millisecond)
 		fmt.Printf("****Menu****\n")
 		fmt.Printf("1. Send a message\n")
 		fmt.Printf("2. Test correlation id\n")
@@ -87,17 +90,25 @@ func main() {
 		}
 
 		if option == "2" {
-			res, err = client.CorrelationIdTest()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
-				return
+			waitGroup := sync.WaitGroup{}
+			for i := 0; i < 20; i++ {
+				waitGroup.Add(1)
+				go func(idx int) {
+					fmt.Printf("Sending correlation id test\n")
+					res, err = client.CorrelationIdTest()
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
+						return
+					}
+					if res.ResponseCode() != chat.ResponseCodeOk {
+						fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+					} else {
+						fmt.Printf("CorrelationIdTest. Response code: %s for id %d \n", chat.FormResponseCodeToString(res.ResponseCode()), res.CorrelationId())
+					}
+					waitGroup.Done()
+				}(i)
 			}
-			if res.ResponseCode() != chat.ResponseCodeOk {
-				fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
-			} else {
-
-				fmt.Printf("CorrelationIdTest. Response code: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
-			}
+			waitGroup.Wait()
 
 		}
 	}

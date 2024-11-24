@@ -184,11 +184,12 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 			correlationId = login.CorrelationId()
 			t.DispatchEvent(fmt.Sprintf("Correlation id test: Login request for user %s", login.Username()), false, 1)
 			go func() {
-				randomSleep := time.Duration(rand.IntN(10)) * time.Second
-				t.DispatchEvent(fmt.Sprintf("Correlation id test: Response sent to user %s correlationId %d, in %d seconds",
-					login.Username(), correlationId, randomSleep), false, 1)
+				ran := rand.IntN(4000)
+				randomSleep := time.Duration(ran * int(time.Millisecond))
 				time.Sleep(randomSleep)
 				lastSendError = t.sendResponse(chat.ResponseCodeOk, correlationId, writer)
+				t.DispatchEvent(fmt.Sprintf("Correlation id test: Response sent to user %s correlationId %d, in %d Millisecond",
+					login.Username(), correlationId, ran), false, 1)
 			}()
 
 		}
