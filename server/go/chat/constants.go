@@ -6,6 +6,8 @@ const (
 	GenericResponseKey uint16 = 0x03
 	Version1           byte   = 1
 
+	CommandCorrelationIdTest uint16 = 0x09
+
 	chatProtocolHeaderSizeBytes = chatProtocolVersionSizeByte + // version
 		chatProtocolKeySizeBytes // command
 	chatProtocolKeySizeBytes       = 2

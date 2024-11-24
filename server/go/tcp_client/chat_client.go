@@ -125,6 +125,11 @@ func (f *ChatClient) Login(user string) (*chat.GenericResponse, error) {
 	return f.sendRPCCommand(commandLogin)
 }
 
+func (f *ChatClient) CorrelationIdTest() (*chat.GenericResponse, error) {
+	commandLogin := chat.NewCorrelationIdCommand()
+	return f.sendRPCCommand(commandLogin)
+}
+
 func (f *ChatClient) SendMessage(message string, to string) (*chat.GenericResponse, error) {
 	commandMessage := chat.NewCommandMessage(message, f.currentUser, to, chat.ConvertTimeToUint64(time.Now()))
 	return f.sendRPCCommand(commandMessage)
@@ -141,16 +146,20 @@ func (f *ChatClient) WaitMessages() {
 	for {
 		dataReader, err := chat.ReadFullBufferFromSource(reader)
 		if err != nil {
-			fmt.Printf("Error reading source: %v\n", err)
+			if errors.Is(err, io.EOF) {
+				fmt.Printf("client is disconnected. Connection reset by peer: %v\n", err)
+			} else {
+				fmt.Printf("client is disconnected, error reading source: %v\n", err)
+			}
 			return
 		}
 		header := &chat.ChatHeader{}
 		err = header.Read(dataReader)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				fmt.Printf("Connection closed due of EOF. The thread is terminated\n")
+				fmt.Printf("client is disconnected. Connection reset by peer: %v\n", err)
 			} else {
-				fmt.Printf("Error reading header: %v\n", err)
+				fmt.Printf("client is disconnected, error reading header: %v\n", err)
 			}
 			break
 		}

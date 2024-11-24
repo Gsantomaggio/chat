@@ -11,6 +11,7 @@ We provide examples in the following languages:
 - Server [golang](./server/go) [Full features]
 - Client [golang](./server/go/tcp_client) [Full features]
 - Server [rust](./server/rust) [Partial features]
+- Server [NodeJS](./server/nodejs) [Partial features]
 
 ### How to run the golang stack:
 

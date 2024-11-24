@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gsantomaggio/chat/server/chat"
 	"io"
+	"math/rand/v2"
 	"net"
 	"sync"
 	"time"
@@ -173,6 +174,24 @@ func (t *TcpServer) handleConnection(conn net.Conn) {
 				t.DispatchEvent(fmt.Sprintf("User %s not found", message.To), true, 3)
 				lastSendError = t.sendResponse(chat.ResponseCodeErrorUserNotFound, correlationId, writer)
 			}
+		case chat.CommandCorrelationIdTest:
+			login := &chat.CommandLogin{}
+			err := login.Read(readerFull)
+			if err != nil {
+				t.DispatchEvent(fmt.Sprintf("Error reading login: %v", err), true, 3)
+				break
+			}
+			correlationId = login.CorrelationId()
+			t.DispatchEvent(fmt.Sprintf("Correlation id test: Login request for user %s", login.Username()), false, 1)
+			go func() {
+				ran := rand.IntN(4000)
+				randomSleep := time.Duration(ran * int(time.Millisecond))
+				time.Sleep(randomSleep)
+				lastSendError = t.sendResponse(chat.ResponseCodeOk, correlationId, writer)
+				t.DispatchEvent(fmt.Sprintf("Correlation id test: Response sent to user %s correlationId %d, in %d Millisecond",
+					login.Username(), correlationId, ran), false, 1)
+			}()
+
 		}
 
 		if lastSendError != nil {
