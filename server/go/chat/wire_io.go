@@ -31,7 +31,7 @@ func WriteCommandWithHeader[T internal.CommandWrite](request T, writer *bufio.Wr
 	mutex.Lock()
 	defer mutex.Unlock()
 	hr := NewChatHeaderFromCommand(request)
-	// as first write how log is the whole message
+	// as first write how long is the whole message
 	// so header + command
 	writtenLength, _ := writeMany(writer, request.SizeNeeded()+hr.SizeNeeded())
 

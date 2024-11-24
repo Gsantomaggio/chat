@@ -34,25 +34,25 @@ The protocol is a binary protocol with the following structure:
 ### Header
 
 | Name      | Type     |
-|-----------|----------|
-| `version` | `byte`   | 
+| --------- | -------- |
+| `version` | `byte`   |
 | `command` | `uint16` |
 
 ### CommandLogin
 
 | Name            | Type     | value(s) | reference         |
-|-----------------|----------|----------|-------------------|
+| --------------- | -------- | -------- | ----------------- |
+| `version`       | `byte`   | 0x01     | `Header::version` |
 | `key`           | `uint16` | 0x01     | `Header::command` |
-| `version`       | `uint16` | 0x01     | `Header::version` |
 | `correlationId` | `uint32` |          |                   |
 | `username`      | `string` |          |                   |
 
 ### CommandMessage
 
 | Name            | Type     | value(s) | reference         |
-|-----------------|----------|----------|-------------------|
+| --------------- | -------- | -------- | ----------------- |
+| `version`       | `byte`   | 0x01     | `Header::version` |
 | `key`           | `uint16` | 0x02     | `Header::command` |
-| `version`       | `uint16` | 0x01     | `Header::version` |
 | `correlationId` | `uint32` |          |                   |
 | `message`       | `string` |          |                   |
 | `From`          | `string` |          |                   |
@@ -64,28 +64,29 @@ The protocol is a binary protocol with the following structure:
 All the commands will have a response with the following structure:
 
 | Name            | Type     | value(s) | reference         |
-|-----------------|----------|----------|-------------------|
+| --------------- | -------- | -------- | ----------------- |
+| `version`       | `byte`   | 0x01     | `Header::version` |
 | `key`           | `uint16` | 0x03     | `Header::command` |
-| `version`       | `uint16` | 0x01     | `Header::version` |
 | `correlationId` | `uint32` |          |                   |
 | `code`          | `uint16` |          | `ResponseCodes`   |
 
 ### ResponseCodes
 
-| Name                     | value(s) | 
-|--------------------------|----------|
+| Name                     | value(s) |
+| ------------------------ | -------- |
 | `OK`                     | 0x01     |
 | `ErrorUserNotFound`      | 0x03     |
 | `ErrorUserAlreadyLogged` | 0x04     |
 
+## Data (bytes) written on the socket
 
-### Write data to the socket
+1. Write the length of whole message (header + command) as a `uint32`
+1. Write the header
+1. Write the command
 
-- Write the length of whole message (header + command) as a `uint32`
-- Write the header
-- Write the command
+### Example with `CommandLogin`
 
-For Example: `CommandLogin` with username `user1`
+If `user1` wants to login, this will be the structure of data sent.
 
 - `Header`:
   - `version` = 0x01 => 1 byte
@@ -94,16 +95,21 @@ For Example: `CommandLogin` with username `user1`
   - `correlationId` = 0x01 => 4 bytes
   - `username` = "user1" => length = 2 + 5 = 7
 
-- Write the length of the whole message: 3 + 11 = 14
-- Write the `header` + `message`:
+In this case the client will:
+
+- write the length in bytes (as `uint32`) of the whole message: 3 + 11 = 14
+  - note: this `uint32` is excluded from the total bytes count
+- write the `header` + `message`:
+
 ```
-0x01 =>  version  (1 byte)
-0x00 0x01  => command ( 2 bytes)
-0x00 0x00 0x00 0x01  => correlationId (4 bytes) 
-0x00 0x05 => username  length  (2 bytes)
-0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes)
+0x00 0x00 0x00 0x0E (`uint32`)  
+0x01 =>  version  (1 byte)  
+0x00 0x01  => command (`uint16`)  
+0x00 0x00 0x00 0x01  => correlationId (`uint32`)  
+0x00 0x05 => username  length  (`uint16`)  
+0x75 0x73 0x65 0x72 0x31 => username (user1) (5 bytes) 
 ```
-- Total bytes written: 14 + 4 = 18
+- Total bytes written: 14 (body)  + 4 (len of body) = 18
 - Send the message
 - Read the `Response`
 
@@ -111,7 +117,7 @@ For Example: `CommandLogin` with username `user1`
 
 - Read the length of the whole message (`header` + `command`) as a `uint32`
 - Read the `header`
-- Read the `command key` 
+- Read the `command key`
 - Read the `command` based on the `key`
 
 For Example: `CommandLogin` with username `user1`
@@ -126,7 +132,6 @@ For Example: `CommandLogin` with username `user1`
     - Read the username: "user1"
   - Process the command
   - Send the `Response`
-
 
 ### CorrelationId
 
@@ -152,14 +157,3 @@ You must be sure to provide a unique `correlationId` for each command sent.
 - [ ] Send message to all users
 - [ ] Command to get the list of users
 - [ ] Persist the users and messages in a database
-
-
-
- 
-
-
-      
-
-
-
-
