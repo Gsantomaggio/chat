@@ -54,24 +54,51 @@ func main() {
 	fmt.Printf("Login %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
 
 	for {
-		fmt.Printf("Write a me message to:\n")
-		userTo, _ := in.ReadString('\n')
-		userTo = userTo[:len(userTo)-1]
-		fmt.Printf("Message text:\n")
-		message, _ := in.ReadString('\n')
-		message = message[:len(message)-1]
-		res, err = client.SendMessage(message, userTo)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
-			return
-		}
-		if res.ResponseCode() != chat.ResponseCodeOk {
-			fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
-		} else {
+		fmt.Printf("****Menu****\n")
+		fmt.Printf("1. Send a message\n")
+		fmt.Printf("2. Test correlation id\n")
+		fmt.Printf("3. Exit\n")
+		fmt.Printf("************\n")
 
-			fmt.Printf("Message sent. Response code: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+		option, _ := in.ReadString('\n')
+		option = option[:len(option)-1]
+		if option == "3" {
+			break
 		}
 
+		if option == "1" {
+			fmt.Printf("Write a me message to:\n")
+			userTo, _ := in.ReadString('\n')
+			userTo = userTo[:len(userTo)-1]
+			fmt.Printf("Message text:\n")
+			message, _ := in.ReadString('\n')
+			message = message[:len(message)-1]
+			res, err = client.SendMessage(message, userTo)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
+				return
+			}
+			if res.ResponseCode() != chat.ResponseCodeOk {
+				fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+			} else {
+
+				fmt.Printf("Message sent. Response code: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+			}
+		}
+
+		if option == "2" {
+			res, err = client.CorrelationIdTest()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
+				return
+			}
+			if res.ResponseCode() != chat.ResponseCodeOk {
+				fmt.Fprintf(os.Stderr, "error sending message: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+			} else {
+
+				fmt.Printf("CorrelationIdTest. Response code: %s\n", chat.FormResponseCodeToString(res.ResponseCode()))
+			}
+
+		}
 	}
-
 }

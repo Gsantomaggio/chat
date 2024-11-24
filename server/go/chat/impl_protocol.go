@@ -9,7 +9,7 @@ import (
 
 type CommandLogin struct {
 	correlationId uint32 // 4 bytes
-	username      string // max 256 characters, for example "gabriele" [8, 103, 97, 98, 114, 105, 101, 108, 101]
+	username      string //  for example "gabriele" [8, 103, 97, 98, 114, 105, 101, 108, 101]
 }
 
 func NewCommandLoginWithCorrelation(username string, correlationId uint32) *CommandLogin {
@@ -188,4 +188,48 @@ func (g *GenericResponse) Write(writer *bufio.Writer) (int, error) {
 
 func (g *GenericResponse) Read(reader *bufio.Reader) error {
 	return readMany(reader, &g.correlationId, &g.responseCode)
+}
+
+//// **** END GENERIC RESPONSE ****
+
+/// **** CORRELATION ID TEST ****
+
+type CorrelationIdTest struct {
+	correlationId uint32 // 4 bytes
+}
+
+func NewCorrelationIdCommand() *CorrelationIdTest {
+	return &CorrelationIdTest{}
+}
+
+func (l *CorrelationIdTest) GetCorrelationId() uint32 {
+	return l.correlationId
+}
+
+func (l *CorrelationIdTest) Key() uint16 {
+	return CommandCorrelationIdTest
+}
+
+func (l *CorrelationIdTest) SizeNeeded() int {
+	return chatProtocolUint32 // correlationId
+}
+
+func (l *CorrelationIdTest) SetCorrelationId(id uint32) {
+	l.correlationId = id
+}
+
+func (l *CorrelationIdTest) CorrelationId() uint32 {
+	return l.correlationId
+}
+
+func (l *CorrelationIdTest) Version() byte {
+	return Version1
+}
+
+func (l *CorrelationIdTest) Write(writer *bufio.Writer) (int, error) {
+	return writeMany(writer, l.correlationId)
+}
+
+func (l *CorrelationIdTest) Read(reader *bufio.Reader) error {
+	return readMany(reader, &l.correlationId)
 }
