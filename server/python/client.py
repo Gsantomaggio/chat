@@ -1,4 +1,6 @@
 import socket
+import sys
+
 
 def send_messages(s):
     while True:
@@ -12,6 +14,7 @@ def send_messages(s):
             data = s.recv(4096)
             print(str(data, "utf-8"))
 
+
 def conn_server(serverAddress: tuple) -> None:
     try:
         with socket.socket() as s:
@@ -24,7 +27,7 @@ def conn_server(serverAddress: tuple) -> None:
         print("Generic exception, exiting...")
 
 
-if __name__ == '__main__':
-    HOST = "127.0.0.1"
-    PORT = 65432
+if __name__ == "__main__":
+    HOST = sys.argv[1]
+    PORT = int(sys.argv[2])
     conn_server((HOST, PORT))
