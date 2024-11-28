@@ -9,7 +9,7 @@ from login import login
 
 
 class Message:
-    def __init__(self, buffer: bytes, user: str = "") -> None:
+    def __init__(self, buffer: bytes, user: str) -> None:
         self.buffer = None
         if self.buffer is None:
             self.buffer = buffer

@@ -1,20 +1,22 @@
 import socket
 from threading import Thread, active_count
 
+from source.message import Message
+
+
+def handle_client_message(buffer: bytes, user: str) -> Message:
+    return Message(buffer, user)
+
 
 def handle_client_connection(conn, addr):
     with conn:
         print(f"Connected by {addr[0]}:{addr[1]}")
+        user = ""
         while True:
             data = conn.recv(1024)
-            data_string = str(data, "utf-8")
-            is_exit = data_string.upper() == "ESC"
-            if is_exit:
-                print("Closing connection...")
-                break
-            print(data_string)
-            new_data = f"Received message: {data_string}"
-            conn.sendall(new_data.encode())
+            m = handle_client_message(data, user)
+            print(m.username)
+            conn.sendall(m)
     print(f"Active connections: {active_count()-1}")
 
 
