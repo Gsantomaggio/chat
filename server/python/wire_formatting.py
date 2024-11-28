@@ -1,17 +1,14 @@
 
-def read_header(buffer: bytes, offset: int):
-    version = buffer[offset : offset + 1]
-    offset += 1
-    command = buffer[offset : offset + 2]
-    offset += 2
+def read_header_components(buffer: bytes, offset: int):
+    version, offset = read_uint8(buffer, offset)
+    command, offset = read_uint16(buffer, offset)
     return version, command, offset
 
 
 def read_string(buffer: bytes, offset: int) -> tuple:
-    total_move_offset = offset + 2
-    length = int.from_bytes(buffer[offset:total_move_offset], "big")
-    offset += total_move_offset + length
-    data_string = bytes(buffer[total_move_offset:offset]).decode(errors="ignore")
+    length, offset = read_uint16(buffer, offset)
+    data_string = bytes(buffer[offset:offset+length]).decode(errors="ignore")
+    offset += length
 
     return data_string, offset
 
@@ -25,6 +22,13 @@ def read_uint32(buffer: bytes, offset: int) -> tuple:
 
 def read_uint16(buffer: bytes, offset: int) -> tuple:
     total_move_offset = offset + 2
+    data = int.from_bytes(buffer[offset:total_move_offset], "big")
+
+    return data, total_move_offset
+
+
+def read_uint8(buffer: bytes, offset: int) -> tuple:
+    total_move_offset = offset + 1
     data = int.from_bytes(buffer[offset:total_move_offset], "big")
 
     return data, total_move_offset
