@@ -2,6 +2,7 @@ from wire_formatting import (
     read_header_components,
     read_uint32,
     read_string,
+    read_timestamp
 )
 
 
@@ -28,7 +29,7 @@ def read_correlationId(buffer: bytes, offset: int):
     return read_uint32(buffer, offset)
 
 
-def login(buffer: bytes, offset: int):
+def read_command_login(buffer: bytes, offset: int):
     username, offset = read_string(buffer, offset)
     if username not in users:
         users.add(username)
@@ -36,4 +37,22 @@ def login(buffer: bytes, offset: int):
     else:
         return f"user: {username} already logged"
 
-print(login(b"\x00\x05\x75\x73\x65\x72\x31", 0))
+
+def read_command_message(buffer: bytes, offset: int):
+    message_field, offset = read_string(buffer, offset)
+    from_field, offset = read_string(buffer, offset)
+    to_field, offset = read_string(buffer, offset)
+    timestamp, offset = read_timestamp(buffer, offset)
+    timestamp = timestamp.strftime("%d-%m-%Y")
+    
+    message = {
+        "message": message_field,
+        "Trom": from_field,
+        "To": to_field,
+        "Time": timestamp,
+    }
+    
+    return message
+
+print(read_command_message(b"\x00\x05\x75\x03\x65\x72\x31\x00\x05\x75\x73\x65\x72\x31\x00\x05\x75\x73\x65\x72\x31\x73\x65\x72\x31", 0))
+
