@@ -9,7 +9,7 @@ def read_header_components(buffer: bytes, offset: int):
 
 def read_string(buffer: bytes, offset: int) -> tuple:
     length, offset = read_uint16(buffer, offset)
-    data_string = bytes(buffer[offset:offset+length]).decode(errors="ignore")
+    data_string = bytes(buffer[offset : offset + length]).decode(errors="ignore")
     offset += length
 
     return data_string, offset
