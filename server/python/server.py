@@ -3,9 +3,9 @@ from threading import Thread, active_count
 
 from source.message import Message
 
-
-def handle_client_message(buffer: bytes, user: str) -> Message:
-    return Message(buffer, user)
+"""
+handle if user is not logged correctly
+"""
 
 
 def handle_client_connection(conn, addr):
@@ -14,9 +14,9 @@ def handle_client_connection(conn, addr):
         user = ""
         while True:
             data = conn.recv(1024)
-            m = handle_client_message(data, user)
-            print(m.username)
-            conn.sendall(m)
+#            m = handle_client_message(data, user)
+#            print(m.username)
+#            conn.sendall(m)
     print(f"Active connections: {active_count()-1}")
 
 

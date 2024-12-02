@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 
-def read_header_components(buffer: bytes, offset: int):
+def read_header(buffer: bytes, offset: int):
     version, offset = read_uint8(buffer, offset)
     command, offset = read_uint16(buffer, offset)
     return version, command, offset
