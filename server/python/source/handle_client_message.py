@@ -14,12 +14,14 @@ def read_message(buffer: bytes, conn: socket, is_logged_correctly: bool):
     _, key, offset = read_header(buffer, offset)
     correlationId, offset = read_correlationId(buffer, offset)
     if key == 1:
-        return login(buffer, offset, conn)
+        username = login(buffer, offset, conn)
+        return username, "CommandLogin"
     elif key == 2:
         if is_logged_correctly:
-            return read_command_message(buffer, offset, correlationId)
+            message = read_command_message(buffer, offset, correlationId)
+            return message, "CommandMessage"
         else:
-            raise Exception(
+            raise ValueError(
                 "Message sent without a login. Please send a CommandLogin message"
             )
     else:
