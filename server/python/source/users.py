@@ -1,7 +1,7 @@
 from socket import socket
 import time
 
-from wire_formatting import read_string
+from source.wire_formatting import read_string
 
 
 users = {}

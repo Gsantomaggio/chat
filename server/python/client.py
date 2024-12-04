@@ -1,11 +1,18 @@
 import socket
 import sys
 
+from source import protocol
 
 def send_messages(s):
     while True:
-        message = input("msg: ->\t ")
-        s.send(message.encode())
+        ##################################
+        # only for testing
+        message = protocol.login_message
+        s.send(message)
+        ##################################
+        # message = input("msg: ->\t ")
+        # s.send(message.encode())
+        ##################################
         if message.upper() == "ESC":
             print("Closing connection to the server.")
             s.close()
@@ -13,6 +20,7 @@ def send_messages(s):
         else:
             data = s.recv(4096)
             print(str(data, "utf-8"))
+        break
 
 
 def conn_server(serverAddress: tuple) -> None:

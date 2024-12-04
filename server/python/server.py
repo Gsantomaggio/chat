@@ -10,22 +10,23 @@ def handle_client_connection(conn, addr):
         print(f"Connected by {addr[0]}:{addr[1]}")
         is_logged = False
         while True:
-            data = conn.recv(1024)
-            try:
-                result, command = read_message(data, conn, is_logged)
-                if command == "CommandLogin":
-                    is_logged = True
-                    conn.send(f"user: {result} logged in correcly")
-                elif command == "CommandMessage":
-                    message = result
-                    user: User = users[message.to_field]
-                    user.messages.append()
-                else:
-                    print(f"Generic Error occurred. Command: {command}")
-            except ValueError as verr:
-                conn.send(verr)
-
-    print(f"Active connections: {active_count()-1}")
+            data = conn.recv(2048)
+            if data:
+                try:
+                    result, command = read_message(data, conn, is_logged)
+                    if command == "CommandLogin":
+                        is_logged = True
+                        conn.send(f"user: {result} logged in correcly".encode())
+                    elif command == "CommandMessage":
+                        message = result
+                        user: User = users[message.to_field]
+                        user.messages.append()
+                        print(user.messages)
+                except ValueError as verr:
+                    conn.send(str(verr).encode())
+                except Exception as e:
+                    print(e)
+                    break
 
 
 def accept_connections(sock: socket.socket) -> None:

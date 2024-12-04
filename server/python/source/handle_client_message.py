@@ -1,12 +1,12 @@
 from socket import socket
-from wire_formatting import (
+from source.wire_formatting import (
     read_header,
     read_uint32,
     read_string,
     read_timestamp,
 )
-from message import Message
-from users import login
+from source.message import Message
+from source.users import login
 
 
 def read_message(buffer: bytes, conn: socket, is_logged_correctly: bool):
@@ -31,7 +31,7 @@ def read_message(buffer: bytes, conn: socket, is_logged_correctly: bool):
 def read_message_length(buffer: bytes, offset: int = 0) -> tuple:
     length, offset = read_uint32(buffer, offset)
     msg_len_rcv = len(buffer[offset:])
-    if length < msg_len_rcv:
+    if length != msg_len_rcv:
         raise ValueError(
             f"Message not correct, declared len {length}, but received len {msg_len_rcv}"
         )
