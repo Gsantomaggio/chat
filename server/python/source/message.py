@@ -5,6 +5,8 @@ class Message:
         self.from_field = from_field
         self.to_field = to_field
         self.timestamp = timestamp
-    
+
     def __str__(self) -> str:
-        return f"\nmessage: {self.message}\nfrom: {self.from_field}\nto: {self.to_field}"
+        return (
+            f"\nmessage: {self.message}\nfrom: {self.from_field}\nto: {self.to_field}"
+        )

@@ -2,7 +2,7 @@ import socket
 from threading import Thread, active_count
 
 from source.handle_client_message import read_message
-from source.users import users, User, check_user
+from source.users import users, check_user
 
 
 def handle_client_connection(conn, addr):
@@ -29,8 +29,9 @@ def handle_client_connection(conn, addr):
                 except Exception as e:
                     print(e)
                     break
-    for key,value in users.items():
+    for key, value in users.items():
         print(value)
+
 
 def accept_connections(sock: socket.socket) -> None:
     conn, addr = sock.accept()

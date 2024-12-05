@@ -14,14 +14,15 @@ class User:
         self.isonline = False
         self.conn = None
         self.messages = []
-        
+
     def __str__(self) -> str:
         if self.lastlogin:
             from datetime import datetime
-            format = '%d-%m-%Y %H:%M:%S'
+
+            format = "%d-%m-%Y %H:%M:%S"
             lastlogin = datetime.fromtimestamp(self.lastlogin).strftime(format)
         else:
-            lastlogin = ''
+            lastlogin = ""
         return f"\nuser: {self.username}\nlast login: {lastlogin}\nmessages to recv: {len(self.messages)}"
 
     def update_lastlogin(self):

@@ -12,5 +12,5 @@ tofield = bytes("user2", "utf-8")
 timestamp = (1733236118).to_bytes(8)
 
 login_message = mex_length + version + key_login + correlationId + length + user1
-mex = b'\x00\x0e' + message + length + fromfield + length + tofield + timestamp 
-message_message =  b'\x00\x00\x00\x2d' + version + key_message + correlationId + mex
+mex = b"\x00\x0e" + message + length + fromfield + length + tofield + timestamp
+message_message = b"\x00\x00\x00\x2d" + version + key_message + correlationId + mex
