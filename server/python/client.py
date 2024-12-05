@@ -3,6 +3,7 @@ import sys
 
 from source import protocol
 
+
 def send_messages(s):
     while True:
         ##################################

@@ -11,7 +11,10 @@ def handle_client_connection(conn, addr):
         is_logged = False
         while True:
             data = conn.recv(2048)
-            if data:
+            if not data:
+                print("Connection closed")
+                break
+            else:
                 try:
                     result, command = read_message(data, conn, is_logged)
                     if command == "CommandLogin":
@@ -27,6 +30,7 @@ def handle_client_connection(conn, addr):
                 except Exception as e:
                     print(e)
                     break
+    return
 
 
 def accept_connections(sock: socket.socket) -> None:
@@ -45,6 +49,13 @@ def run_server(host: str = "0.0.0.0", port: int = 0, backlog: int = 5) -> None:
             print(f"Server listening on address: {host}:{port}")
             while True:
                 accept_connections(s)
+                """
+                import time
+                time.sleep(1)
+                if active_count() == 1:
+                    print("Chiusura beccata correttamente...")
+                    break
+                """
     except socket.error as err:
         print(f"Socket Error: {err} | exiting...")
     except Exception:
