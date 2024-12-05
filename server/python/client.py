@@ -5,10 +5,12 @@ from source import protocol
 
 
 def send_messages(s):
-    while True:
-        ##################################
-        # only for testing
-        message = protocol.login_message
+    # while True:
+    for i in range(2):
+        if i == 0:
+            message = protocol.login_message
+        else:
+            message = protocol.message_message
         s.send(message)
         ##################################
         # message = input("msg: ->\t ")
@@ -21,7 +23,6 @@ def send_messages(s):
         else:
             data = s.recv(4096)
             print(str(data, "utf-8"))
-        break
 
 
 def conn_server(serverAddress: tuple) -> None:

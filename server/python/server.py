@@ -2,7 +2,7 @@ import socket
 from threading import Thread, active_count
 
 from source.handle_client_message import read_message
-from source.users import users, User
+from source.users import users, User, check_user
 
 
 def handle_client_connection(conn, addr):
@@ -21,17 +21,16 @@ def handle_client_connection(conn, addr):
                         is_logged = True
                         conn.send(f"user: {result} logged in correcly".encode())
                     elif command == "CommandMessage":
-                        message = result
-                        user: User = users[message.to_field]
-                        user.messages.append()
-                        print(user.messages)
+                        user = check_user(result.to_field)
+                        user.messages.append(result)
+                        conn.send(f"message received: {user.messages[-1]}".encode())
                 except ValueError as verr:
                     conn.send(str(verr).encode())
                 except Exception as e:
                     print(e)
                     break
-    return
-
+    for key,value in users.items():
+        print(value)
 
 def accept_connections(sock: socket.socket) -> None:
     conn, addr = sock.accept()
