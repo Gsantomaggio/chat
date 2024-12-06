@@ -37,14 +37,13 @@ def login(buffer: bytes, offset: int, conn: socket) -> User:
     username, _ = read_string(buffer, offset)
     user = check_user(username)
     if user.isonline:
-        raise ValueError(f"user: {username} already logged!")
+        return 4, user
     else:
         user.isonline = True
         user.conn = conn
         user.update_lastlogin()
-        conn.send(f"user: {username} logged in correcly".encode())
 
-        return user
+        return 1, user
 
 
 def logout(username: str) -> None:

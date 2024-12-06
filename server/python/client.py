@@ -17,12 +17,12 @@ def send_messages(s, user):
             message = protocol.message_message
         else:
             message = None
-        if message:            
+        if message:
             s.send(message)
-        ##################################
-        # message = input("msg: ->\t ")
-        # s.send(message.encode())
-        ##################################
+            ##################################
+            # message = input("msg: ->\t ")
+            # s.send(message.encode())
+            ##################################
             if message.upper() == "ESC":
                 print("Closing connection to the server.")
                 s.close()

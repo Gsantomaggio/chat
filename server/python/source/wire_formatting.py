@@ -55,3 +55,7 @@ def datetime_from_unix_milliseconds(ms: int) -> datetime:
     dt_with_offset = utc_epoch + delta
 
     return dt_with_offset
+
+
+def write_uint16(num: int):
+    return num.to_bytes(2)
