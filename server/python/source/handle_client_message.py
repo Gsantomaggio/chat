@@ -6,7 +6,7 @@ from source.wire_formatting import (
     read_timestamp,
 )
 from source.message import Message
-from source.users import login
+from source.users import login, User
 
 
 def read_message(buffer: bytes, conn: socket, is_logged_correctly: bool):
@@ -14,8 +14,8 @@ def read_message(buffer: bytes, conn: socket, is_logged_correctly: bool):
     _, key, offset = read_header(buffer, offset)
     correlationId, offset = read_correlationId(buffer, offset)
     if key == 1:
-        username = login(buffer, offset, conn)
-        return username, "CommandLogin"
+        user: User = login(buffer, offset, conn)
+        return user, "CommandLogin"
     elif key == 2:
         if is_logged_correctly:
             message = read_command_message(buffer, offset, correlationId)
@@ -50,3 +50,9 @@ def read_command_message(buffer: bytes, offset: int, correlationId: int) -> Mess
     timestamp = timestamp.strftime("%d-%m-%Y %H:%M:%S")
 
     return Message(correlationId, message_field, from_field, to_field, timestamp)
+
+
+def send_user_messages(user: User):
+    while user.messages:
+        mex = user.messages.pop()
+        user.conn.send(str(mex).encode())

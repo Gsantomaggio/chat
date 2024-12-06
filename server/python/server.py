@@ -1,7 +1,7 @@
 import socket
 from threading import Thread, active_count
 
-from source.handle_client_message import read_message
+from source.handle_client_message import read_message, send_user_messages
 from source.users import users, check_user
 
 
@@ -19,7 +19,7 @@ def handle_client_connection(conn, addr):
                     result, command = read_message(data, conn, is_logged)
                     if command == "CommandLogin":
                         is_logged = True
-                        conn.send(f"user: {result} logged in correcly".encode())
+                        send_user_messages(result)
                     elif command == "CommandMessage":
                         user = check_user(result.to_field)
                         user.messages.append(result)

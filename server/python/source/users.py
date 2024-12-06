@@ -33,7 +33,7 @@ def check_user(username: str) -> User:
     return users.setdefault(username, User(username))
 
 
-def login(buffer: bytes, offset: int, conn: socket) -> tuple:
+def login(buffer: bytes, offset: int, conn: socket) -> User:
     username, _ = read_string(buffer, offset)
     user = check_user(username)
     if user.isonline:
@@ -42,8 +42,9 @@ def login(buffer: bytes, offset: int, conn: socket) -> tuple:
         user.isonline = True
         user.conn = conn
         user.update_lastlogin()
+        conn.send(f"user: {username} logged in correcly".encode())
 
-        return username
+        return user
 
 
 def logout(username: str) -> None:
