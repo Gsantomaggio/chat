@@ -4,22 +4,24 @@ from source.wire_formatting import (
     read_uint32,
     read_string,
     read_timestamp,
-    write_uint16
+    write_uint16,
+    write_uint32,
+    write_uint8,
 )
 from source.message import Message
-from source.users import login, User
+from source.users import login, check_user, User
 
 
 def read_message(buffer: bytes, conn: socket, user: User | None) -> tuple:
     _, offset = read_message_length(buffer)
     _, key, offset = read_header(buffer, offset)
     correlationId, offset = read_correlationId(buffer, offset)
-    if key == 1:
-        response_code, user = login(buffer, offset, conn)
-        send_response(correlationId, response_code, user)
-        send_user_messages(user)
 
-        return user, "CommandLogin"
+    if key == 1:
+        response_code, usr = login(buffer, offset, conn)
+        send_response(correlationId, response_code, usr)
+
+        return usr, "CommandLogin"
 
     elif key == 2:
         if user:
@@ -29,11 +31,11 @@ def read_message(buffer: bytes, conn: socket, user: User | None) -> tuple:
         else:
             send_response(correlationId, 3, user)
             message = None
-        
+
         return message, "CommandMessage"
 
     else:
-        raise ValueError(f"Error command in the header. Key: {key}")
+        raise ValueError(f"Received wrong COMMAND in the header. KEY: {key}")
 
 
 def read_message_length(buffer: bytes, offset: int = 0) -> tuple:
@@ -60,6 +62,13 @@ def read_command_message(buffer: bytes, offset: int, correlationId: int) -> Mess
     return Message(correlationId, message_field, from_field, to_field, timestamp)
 
 
+def send_message(m: Message) -> None:
+    user = check_user(m.to_field)
+    user.messages.append(m)
+    if user.isonline:
+        send_user_messages(user)
+
+
 def send_user_messages(user: User) -> None:
     while user.messages:
         mex = user.messages.pop()
@@ -67,8 +76,9 @@ def send_user_messages(user: User) -> None:
 
 
 def send_response(correlationId: int, code: int, user: User) -> None:
-    version = (1).to_bytes()
+    version = write_uint8(1)
     key = write_uint16(3)
+    corrId = write_uint32(correlationId)
     response_code = write_uint16(code)
-    response = version+key+correlationId+response_code
+    response = version + key + corrId + response_code
     user.conn.send(response)

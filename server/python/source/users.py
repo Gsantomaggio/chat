@@ -46,5 +46,6 @@ def login(buffer: bytes, offset: int, conn: socket) -> User:
         return 1, user
 
 
-def logout(username: str) -> None:
-    users[username].isonline = False
+def logout(user: User | None) -> None:
+    if user:
+        user.isonline = False

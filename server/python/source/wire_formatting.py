@@ -57,5 +57,13 @@ def datetime_from_unix_milliseconds(ms: int) -> datetime:
     return dt_with_offset
 
 
-def write_uint16(num: int):
+def write_uint8(num: int) -> bytes:
+    return num.to_bytes()
+
+
+def write_uint16(num: int) -> bytes:
     return num.to_bytes(2)
+
+
+def write_uint32(num: int) -> bytes:
+    return num.to_bytes(4)
