@@ -50,4 +50,4 @@ def run_server(host: str = "0.0.0.0", port: int = 0, backlog: int = 5) -> None:
 
 
 if __name__ == "__main__":
-    run_server(port=30001)
+    run_server(port=5555)

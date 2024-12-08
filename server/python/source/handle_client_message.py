@@ -57,7 +57,7 @@ def read_command_message(buffer: bytes, offset: int, correlationId: int) -> Mess
     from_field, offset = read_string(buffer, offset)
     to_field, offset = read_string(buffer, offset)
     timestamp, offset = read_timestamp(buffer, offset)
-    timestamp = timestamp.strftime("%d-%m-%Y %H:%M:%S")
+    # timestamp = timestamp.strftime("%d-%m-%Y %H:%M:%S")
 
     return Message(correlationId, message_field, from_field, to_field, timestamp)
 
@@ -80,5 +80,7 @@ def send_response(correlationId: int, code: int, user: User) -> None:
     key = write_uint16(3)
     corrId = write_uint32(correlationId)
     response_code = write_uint16(code)
-    response = version + key + corrId + response_code
+    resp = version + key + corrId + response_code
+    resp_length = len(resp).to_bytes(4)
+    response = resp_length + resp
     user.conn.send(response)

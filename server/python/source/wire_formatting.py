@@ -45,16 +45,7 @@ def read_uint8(buffer: bytes, offset: int) -> tuple:
 
 def read_timestamp(buffer: bytes, offset: int) -> tuple:
     value, offset = read_uint64(buffer, offset)
-    date_time_offset = datetime_from_unix_milliseconds(value)
-    return date_time_offset, offset
-
-
-def datetime_from_unix_milliseconds(ms: int) -> datetime:
-    delta = timedelta(milliseconds=ms)
-    utc_epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-    dt_with_offset = utc_epoch + delta
-
-    return dt_with_offset
+    return value, offset
 
 
 def write_uint8(num: int) -> bytes:
@@ -66,4 +57,4 @@ def write_uint16(num: int) -> bytes:
 
 
 def write_uint32(num: int) -> bytes:
-    return num.to_bytes(4)
+    return int(num).to_bytes(4)

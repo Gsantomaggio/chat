@@ -48,5 +48,5 @@ def conn_server(serverAddress: tuple) -> None:
 if __name__ == "__main__":
     HOST = "0.0.0.0"
     # PORT = int(sys.argv[1])
-    PORT = 30001
+    PORT = 5555
     conn_server((HOST, PORT))

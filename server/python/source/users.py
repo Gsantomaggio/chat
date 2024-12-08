@@ -49,3 +49,4 @@ def login(buffer: bytes, offset: int, conn: socket) -> User:
 def logout(user: User | None) -> None:
     if user:
         user.isonline = False
+        user.conn = None
