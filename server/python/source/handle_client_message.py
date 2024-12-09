@@ -88,7 +88,7 @@ def create_command_message(m: Message) -> bytes:
     mex_length = write_uint32(len(mex))
 
     return mex_length + mex
-    
+
 
 def send_message(m: Message) -> None:
     user = check_user(m.to_field)

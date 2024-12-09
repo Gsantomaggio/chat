@@ -1,12 +1,9 @@
 import socket
-from threading import Thread, active_count
+from threading import Thread  # , active_count
 
 from source.handle_client_message import read_message, send_user_messages, send_message
 from source.users import logout
 
-##############################################
-# send_user_messages to go client doesn't work
-##############################################
 
 def handle_client_connection(conn, addr):
     with conn:
