@@ -18,7 +18,9 @@ def read_message(buffer: bytes, conn: socket, user: User | None) -> tuple:
     correlationId, offset = read_correlationId(buffer, offset)
 
     if key == 1:
-        response_code, usr = login(buffer, offset, conn)
+        username, _ = read_string(buffer, offset)
+        usr = check_user(username)
+        response_code = login(usr, conn)
         send_response(correlationId, response_code, usr)
 
         return usr, "CommandLogin"
@@ -57,10 +59,36 @@ def read_command_message(buffer: bytes, offset: int, correlationId: int) -> Mess
     from_field, offset = read_string(buffer, offset)
     to_field, offset = read_string(buffer, offset)
     timestamp, offset = read_timestamp(buffer, offset)
-    # timestamp = timestamp.strftime("%d-%m-%Y %H:%M:%S")
 
     return Message(correlationId, message_field, from_field, to_field, timestamp)
 
+
+def create_command_message(m: Message) -> bytes:
+    version = write_uint8(1)
+    key = write_uint16(2)
+    correlationId = int(m.correlationId).to_bytes(4)
+    prefix = version + key + correlationId
+    message = bytes(m.message, "utf-8")
+    message_length = len(message).to_bytes(2)
+    from_field = bytes(m.from_field, "utf-8")
+    from_length = len(from_field).to_bytes(2)
+    to_field = bytes(m.to_field, "utf-8")
+    to_length = len(to_field).to_bytes(2)
+    timestamp = int(m.timestamp).to_bytes(8)
+    mex = (
+        prefix
+        + message_length
+        + message
+        + from_length
+        + from_field
+        + to_length
+        + to_field
+        + timestamp
+    )
+    mex_length = len(mex).to_bytes(4)
+
+    return mex_length + mex
+    
 
 def send_message(m: Message) -> None:
     user = check_user(m.to_field)
@@ -71,7 +99,8 @@ def send_message(m: Message) -> None:
 
 def send_user_messages(user: User) -> None:
     while user.messages:
-        mex = user.messages.pop()
+        m = user.messages.pop()
+        mex = create_command_message(m)
         user.conn.send(str(mex).encode())
 
 

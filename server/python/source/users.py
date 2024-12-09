@@ -1,8 +1,6 @@
 from socket import socket
 import time
 
-from source.wire_formatting import read_string
-
 
 users = {}
 
@@ -33,17 +31,14 @@ def check_user(username: str) -> User:
     return users.setdefault(username, User(username))
 
 
-def login(buffer: bytes, offset: int, conn: socket) -> User:
-    username, _ = read_string(buffer, offset)
-    user = check_user(username)
+def login(user: User, conn: socket) -> int:
     if user.isonline:
-        return 4, user
+        return 4
     else:
         user.isonline = True
         user.conn = conn
         user.update_lastlogin()
-
-        return 1, user
+        return 1
 
 
 def logout(user: User | None) -> None:
