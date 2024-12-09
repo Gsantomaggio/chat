@@ -22,6 +22,8 @@ def handle_client_connection(conn, addr):
                 elif result and command == "CommandMessage":
                     send_message(result)
                 data = conn.recv(2048)
+            except socket.error:
+                break
             except (Exception, ValueError) as e:
                 print(f"Generic error...\n{e}")
                 break

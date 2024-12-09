@@ -66,14 +66,14 @@ def read_command_message(buffer: bytes, offset: int, correlationId: int) -> Mess
 def create_command_message(m: Message) -> bytes:
     version = write_uint8(1)
     key = write_uint16(2)
-    correlationId = int(m.correlationId).to_bytes(4)
+    correlationId = write_uint32(m.correlationId)
     prefix = version + key + correlationId
     message = bytes(m.message, "utf-8")
-    message_length = len(message).to_bytes(2)
+    message_length = write_uint16(len(message))
     from_field = bytes(m.from_field, "utf-8")
-    from_length = len(from_field).to_bytes(2)
+    from_length = write_uint16(len(from_field))
     to_field = bytes(m.to_field, "utf-8")
-    to_length = len(to_field).to_bytes(2)
+    to_length = write_uint16(len(to_field))
     timestamp = int(m.timestamp).to_bytes(8)
     mex = (
         prefix
@@ -85,7 +85,7 @@ def create_command_message(m: Message) -> bytes:
         + to_field
         + timestamp
     )
-    mex_length = len(mex).to_bytes(4)
+    mex_length = write_uint32(len(mex))
 
     return mex_length + mex
     
@@ -99,9 +99,9 @@ def send_message(m: Message) -> None:
 
 def send_user_messages(user: User) -> None:
     while user.messages:
-        m = user.messages.pop()
+        m = user.messages.pop(0)
         mex = create_command_message(m)
-        user.conn.send(str(mex).encode())
+        user.conn.send(mex)
 
 
 def send_response(correlationId: int, code: int, user: User) -> None:
