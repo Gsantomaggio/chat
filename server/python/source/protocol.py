@@ -1,7 +1,7 @@
 import time
 
-version = b"\x01"
-key_login = b"\x00\x01"
+version = b"\x00\x01"
+key_login = b"\x00\x00"
 key_message = b"\x00\x02"
 correlationId = b"\x00\x00\x00\x01"
 

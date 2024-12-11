@@ -9,32 +9,34 @@ from source.wire_formatting import (
     write_uint8,
 )
 from source.message import Message
-from source.users import login, check_user, User
+from source.users import User
 
 
-def read_message(buffer: bytes, conn: socket, user: User | None) -> tuple:
+def read_message(buffer: bytes, conn: socket, user: User | None, users: dict) -> User:
     _, offset = read_message_length(buffer)
     _, key, offset = read_header(buffer, offset)
     correlationId, offset = read_correlationId(buffer, offset)
 
     if key == 1:
         username, _ = read_string(buffer, offset)
-        usr = check_user(username)
-        response_code = login(usr, conn)
+        usr = users.setdefault(username, User(username))
+        response_code = usr.login(conn)
         send_response(correlationId, response_code, usr)
+        send_user_messages(usr)
 
-        return usr, "CommandLogin"
+        return usr
 
     elif key == 2:
         if user:
             response_code = 1
             send_response(correlationId, response_code, user)
             message = read_command_message(buffer, offset, correlationId)
+            send_message(message, users)
         else:
             send_response(correlationId, 3, user)
             message = None
 
-        return message, "CommandMessage"
+        return user
 
     else:
         raise ValueError(f"Received wrong COMMAND in the header. KEY: {key}")
@@ -47,10 +49,11 @@ def read_message_length(buffer: bytes, offset: int = 0) -> tuple:
         raise ValueError(
             f"Message not correct, declared len {length}, but received len {msg_len_rcv}"
         )
+
     return length, offset
 
 
-def read_correlationId(buffer: bytes, offset: int):
+def read_correlationId(buffer: bytes, offset: int) -> int:
     return read_uint32(buffer, offset)
 
 
@@ -90,8 +93,9 @@ def create_command_message(m: Message) -> bytes:
     return mex_length + mex
 
 
-def send_message(m: Message) -> None:
-    user = check_user(m.to_field)
+def send_message(m: Message, users: dict) -> None:
+    receiver = m.to_field
+    user = users.setdefault(receiver, User(receiver))
     user.messages.append(m)
     if user.isonline:
         send_user_messages(user)
