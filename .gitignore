@@ -166,3 +166,4 @@ cython_debug/
 # avoids accidentally committing compiled go files
 server/go/run/client/client
 server/go/run/server/server
+.ruff*
