@@ -1,8 +1,13 @@
+import time
 import socket
 from threading import Thread, Event
 
 from source.handle_client_message import read_message
 from source.users import logout
+
+from source import Logger
+
+logger = Logger(__name__)
 
 
 class TcpServer:
@@ -16,11 +21,27 @@ class TcpServer:
         self.server_thread.start()
         self.stop_server()
 
+    def log_users_status(self):
+        def print_users_status(self):
+            while not self.stop_event.is_set():
+                if not self.users:
+                    users_to_print = "Users: []\n"
+                else:
+                    users_to_print = "Users:\n\t"
+                    for user in self.users.values():
+                        single_user_to_print = f"{user}\n\t"
+                        users_to_print += single_user_to_print
+                logger.debug(users_to_print)
+                time.sleep(1)
+
+        thread = Thread(target=print_users_status, args=(self,))
+        thread.start()
+
     def handle_client_connection(self, conn, addr):
         conn.settimeout(1)
         with conn:
             client_refs = f"{addr[0]}:{addr[1]}"
-            print(f"Connected by {client_refs}")
+            logger.info(f"Connected by {client_refs}")
             usr = None
             while not self.stop_event.is_set():
                 try:
@@ -29,11 +50,12 @@ class TcpServer:
                         usr = read_message(data, conn, usr, self.users)
                     else:
                         logout(usr)
+                        logger.info(f"User {usr.username} logged out")
                         break
                 except socket.timeout:
                     continue
                 except ValueError as e:
-                    print(f"{e}\nClosing connection with {client_refs}")
+                    logger.warning(f"{e}\nClosing connection with {client_refs}")
 
     def accept_connections(self, sock: socket.socket):
         while not self.stop_event.is_set():
@@ -51,16 +73,15 @@ class TcpServer:
                 s.listen(self.backlog)
                 s.settimeout(1)
                 host, port = s.getsockname()
-                print(f"Server listening on address: {host}:{port}")
+                logger.info(f"Server listening on address: {host}:{port}")
+                self.log_users_status()
                 self.accept_connections(s)
         except socket.error as err:
-            print(f"Socket Error: {err} | exiting...")
+            logger.error(f"Socket Error: {err} | exiting...")
         except Exception as e:
-            print(f"Generic exception, exiting...\n{e}")
+            logger.critical(f"Generic exception, exiting...\n{e}")
 
     def stop_server(self):
         input("Press ENTER to stop\n")
         self.stop_event.set()
         self.server_thread.join()
-
-

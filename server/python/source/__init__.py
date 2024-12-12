@@ -3,19 +3,19 @@ import logging
 
 RESET = "\033[0m"
 COLORS = {
-    'DEBUG': "\033[36m",  # Cyan
-    'INFO': "\033[32m",   # Green
-    'WARNING': "\033[33m",  # Yellow
-    'ERROR': "\033[31m",  # Red
-    'CRITICAL': "\033[1;31m",  # Bold Red
+    "DEBUG": "\033[36m",  # Cyan
+    "INFO": "\033[32m",  # Green
+    "WARNING": "\033[33m",  # Yellow
+    "ERROR": "\033[31m",  # Red
+    "CRITICAL": "\033[1;31m",  # Bold Red
 }
 
+
 class CustomFormatter(logging.Formatter):
-    
     def format(self, record):
         log_color = COLORS.get(record.levelname, RESET)
-        record.msg = f"{log_color}{record.msg}{RESET}"
-        return super().format(record)
+        message = super().format(record)
+        return f"{log_color}{message}{RESET}"
 
 
 class Logger:
@@ -27,11 +27,14 @@ class Logger:
 
     @staticmethod
     def _configure_handler(logger):
-        formatter = CustomFormatter('%(asctime)s - %(message)s')
+        formatter = CustomFormatter(
+            fmt="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+
 
 if __name__ == "__main__":
     logger = Logger(__name__)

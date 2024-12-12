@@ -11,6 +11,10 @@ from source.wire_formatting import (
 from source.message import Message
 from source.users import User
 
+from source import Logger
+
+logger = Logger(__name__)
+
 
 def read_message(buffer: bytes, conn: socket, user: User | None, users: dict) -> User:
     _, offset = read_message_length(buffer)
@@ -19,8 +23,10 @@ def read_message(buffer: bytes, conn: socket, user: User | None, users: dict) ->
 
     if key == 1:
         username, _ = read_string(buffer, offset)
-        usr = users.setdefault(username, User(username))
+        usr: User = users.setdefault(username, User(username))
         response_code = usr.login(conn)
+        logger.info(f"User {usr.username} logged in")
+
         send_response(correlationId, response_code, usr)
         send_user_messages(usr)
 
