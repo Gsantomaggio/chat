@@ -29,7 +29,7 @@ class TcpServer:
                 else:
                     users_to_print = "Users:\n\t"
                     for user in self.users.values():
-                        single_user_to_print = f"{user}\n\t"
+                        single_user_to_print = f"{user.username} is {user.status}, last login: {user.printlastlogin()} UTC\n\t"
                         users_to_print += single_user_to_print
                 logger.debug(users_to_print)
                 time.sleep(1)

@@ -101,17 +101,21 @@ def create_command_message(m: Message) -> bytes:
 
 def send_message(m: Message, users: dict) -> None:
     receiver = m.to_field
-    user = users.setdefault(receiver, User(receiver))
+    user: User = users.setdefault(receiver, User(receiver))
     user.messages.append(m)
     if user.isonline:
         send_user_messages(user)
+    else:
+        logger.warning(f"User {user.username} is offline and received a message from {m.from_field}")
 
 
 def send_user_messages(user: User) -> None:
     while user.messages:
-        m = user.messages.pop(0)
+        m: Message = user.messages.pop(0)
         mex = create_command_message(m)
         user.conn.send(mex)
+        
+        logger.info(f"Sent message from {m.from_field} to {user.username}: {m.message}")
 
 
 def send_response(correlationId: int, code: int, user: User) -> None:
@@ -123,3 +127,5 @@ def send_response(correlationId: int, code: int, user: User) -> None:
     resp_length = len(resp).to_bytes(4)
     response = resp_length + resp
     user.conn.send(response)
+
+    logger.debug(f"Response sent to user {user.username} with correlationId {correlationId}")

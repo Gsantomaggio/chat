@@ -27,7 +27,7 @@ class User:
     
     def printlastlogin(self):
         if self.lastlogin:
-            format = "%d-%m-%Y %H:%M:%S"
+            format = "%a, %d %b %Y %H:%M:%S"
             return datetime.fromtimestamp(self.lastlogin).strftime(format)
         return ""
         
