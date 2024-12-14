@@ -29,10 +29,11 @@ class User:
         if self.lastlogin:
             format = "%a, %d %b %Y %H:%M:%S"
             return datetime.fromtimestamp(self.lastlogin).strftime(format)
-        return ""
+        return "Never"
         
 
 def logout(user: User | None):
     if user:
         user.isonline = False
+        user.status = "offline"
         user.conn = None
