@@ -101,12 +101,15 @@ def create_command_message(m: Message) -> bytes:
 
 def send_message(m: Message, users: dict) -> None:
     receiver = m.to_field
-    user: User = users.setdefault(receiver, User(receiver))
-    user.messages.append(m)
-    if user.isonline:
-        send_user_messages(user)
-    else:
-        logger.warning(f"User {user.username} is offline and received a message from {m.from_field}")
+    try:
+        user = users[receiver]
+        user.messages.append(m)
+        if user.isonline:
+            send_user_messages(user)
+        else:
+            logger.warning(f"User {user.username} is offline and received a message from {m.from_field}")
+    except KeyError:
+        logger.error(f"User {receiver} not found")
 
 
 def send_user_messages(user: User) -> None:
