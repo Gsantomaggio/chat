@@ -2,7 +2,7 @@ import time
 import socket
 from threading import Thread, Event
 
-from source.handle_client_message import read_message
+from source.message_handler import MessageHandler
 from source.users import logout
 
 from source import Logger
@@ -48,7 +48,7 @@ class TcpServer:
                 try:
                     data = conn.recv(2048)
                     if data:
-                        usr = read_message(data, conn, usr, self.users)
+                        usr = MessageHandler(conn, self.users).read_message(data, usr)
                     else:
                         logout(usr)
                         logger.info(f"User {usr.username} logged out")
