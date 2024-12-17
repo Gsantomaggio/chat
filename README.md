@@ -12,6 +12,7 @@ We provide examples in the following languages:
 - Client [golang](./server/go/tcp_client) [Full features]
 - Server [rust](./server/rust) [Partial features]
 - Server [NodeJS](./server/nodejs) [Partial features]
+- Server [Python](./server/python) [Full features]
 
 ### How to run the golang stack:
 
