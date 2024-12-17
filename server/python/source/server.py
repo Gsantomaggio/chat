@@ -6,6 +6,7 @@ from source.handle_client_message import read_message
 from source.users import logout
 
 from source import Logger
+from source.exceptions import AlreadyLoggedException
 
 logger = Logger(__name__)
 
@@ -32,7 +33,7 @@ class TcpServer:
                         single_user_to_print = f"{user.username} is {user.status}, last login: {user.printlastlogin()} UTC\n\t"
                         users_to_print += single_user_to_print
                 logger.debug(users_to_print)
-                time.sleep(1)
+                time.sleep(3)
 
         thread = Thread(target=print_users_status, args=(self,))
         thread.start()
@@ -54,6 +55,9 @@ class TcpServer:
                         break
                 except socket.timeout:
                     continue
+                except AlreadyLoggedException as e:
+                    logger.warning(e)
+                    break
                 except ValueError as e:
                     logger.warning(f"{e}\nClosing connection with {client_refs}")
 

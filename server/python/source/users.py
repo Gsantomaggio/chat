@@ -24,13 +24,13 @@ class User:
             self.conn = conn
             self.lastlogin = time.time()
             return 1
-    
+
     def printlastlogin(self):
         if self.lastlogin:
             format = "%a, %d %b %Y %H:%M:%S"
             return datetime.fromtimestamp(self.lastlogin).strftime(format)
         return "Never"
-        
+
 
 def logout(user: User | None):
     if user:

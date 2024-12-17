@@ -1,4 +1,5 @@
 from socket import socket
+from source.exceptions import AlreadyLoggedException
 from source.wire_formatting import (
     read_header,
     read_uint32,
@@ -25,21 +26,23 @@ def read_message(buffer: bytes, conn: socket, user: User | None, users: dict) ->
         username, _ = read_string(buffer, offset)
         usr: User = users.setdefault(username, User(username))
         response_code = usr.login(conn)
-        logger.info(f"User {usr.username} logged in")
-
-        send_response(correlationId, response_code, usr)
-        send_user_messages(usr)
+        if response_code == 1:
+            logger.info(f"User {usr.username} logged in")
+            send_response(correlationId, response_code, usr.conn)
+            send_user_messages(usr)
+        else:
+            send_response(correlationId, response_code, conn)
+            raise AlreadyLoggedException(f"User {usr.username} already logged")
 
         return usr
 
     elif key == 2:
         if user:
-            response_code = 1
-            send_response(correlationId, response_code, user)
             message = read_command_message(buffer, offset, correlationId)
-            send_message(message, users)
+            response_code = send_message(message, users)
+            send_response(correlationId, response_code, user.conn)
         else:
-            send_response(correlationId, 3, user)
+            send_response(correlationId, 3, user.conn)
             message = None
 
         return user
@@ -99,7 +102,7 @@ def create_command_message(m: Message) -> bytes:
     return mex_length + mex
 
 
-def send_message(m: Message, users: dict) -> None:
+def send_message(m: Message, users: dict) -> int:
     receiver = m.to_field
     try:
         user = users[receiver]
@@ -107,9 +110,13 @@ def send_message(m: Message, users: dict) -> None:
         if user.isonline:
             send_user_messages(user)
         else:
-            logger.warning(f"User {user.username} is offline and received a message from {m.from_field}")
+            logger.warning(
+                f"User {user.username} is offline and received a message from {m.from_field}"
+            )
+        return 1
     except KeyError:
         logger.error(f"User {receiver} not found")
+        return 3
 
 
 def send_user_messages(user: User) -> None:
@@ -117,18 +124,18 @@ def send_user_messages(user: User) -> None:
         m: Message = user.messages.pop(0)
         mex = create_command_message(m)
         user.conn.send(mex)
-        
+
         logger.info(f"Sent message from {m.from_field} to {user.username}: {m.message}")
 
 
-def send_response(correlationId: int, code: int, user: User) -> None:
+def send_response(correlationId: int, code: int, conn: socket) -> None:
     version = write_uint8(1)
     key = write_uint16(3)
     corrId = write_uint32(correlationId)
     response_code = write_uint16(code)
     resp = version + key + corrId + response_code
-    resp_length = len(resp).to_bytes(4)
+    resp_length = write_uint32(9)
     response = resp_length + resp
-    user.conn.send(response)
+    conn.send(response)
 
-    logger.debug(f"Response sent to user {user.username} with correlationId {correlationId}")
+    logger.debug(f"Response sent with correlationId {correlationId}")
