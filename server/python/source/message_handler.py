@@ -16,6 +16,31 @@ from source import Logger
 logger = Logger(__name__)
 
 
+"""
+This module handles user messages in a TCP server environment.
+
+Classes:
+    MessageHandler: A class to handle reading, processing, and sending messages between users.
+
+Functions:
+    read_message(buffer: bytes, user: User | None) -> User: Reads and processes a message from the buffer.
+    _read_message_length(buffer: bytes, offset: int = 0) -> tuple: Reads the length of the message from the buffer.
+    _read_correlationId(buffer: bytes, offset: int) -> int: Reads the correlation ID from the buffer.
+    _read_command_message(buffer: bytes, offset: int, correlationId: int) -> Message: Reads a command message from the buffer.
+    _create_command_message(m: Message) -> bytes: Creates a command message in bytes format.
+    _send_message(m: Message) -> int: Sends a message to the intended recipient.
+    _send_user_messages(user: User) -> list: Sends all queued messages to the user.
+    _send_response(correlationId: int, code: int, conn: socket) -> bytes: Sends a response back to the client.
+
+Usage:
+    This module is used to handle user login, message sending, and response handling in a TCP server. It ensures that messages are correctly formatted, sent, and logged.
+
+Example:
+    handler = MessageHandler(conn, users)
+    user = handler.read_message(buffer, user)
+"""
+
+
 class MessageHandler:
     def __init__(self, conn: socket, users: dict):
         self.conn = conn

@@ -1,5 +1,24 @@
 import logging
 
+"""
+This module sets up a custom logging system with color-coded log levels.
+
+Classes:
+    CustomFormatter: A custom logging formatter that adds color to log messages based on their severity level.
+    Logger: A logger class that configures and returns a logger with the custom formatter.
+
+Usage:
+    The module can be run as a standalone script to demonstrate the logging functionality. When run, it will log messages of various severity levels (DEBUG, INFO, WARNING, ERROR, CRITICAL) to the console with appropriate colors.
+
+Example:
+    logger = Logger(__name__)
+    logger.debug("This is a debug message")
+    logger.info("This is an info message")
+    logger.warning("This is a warning message")
+    logger.error("This is an error message")
+    logger.critical("This is a critical message")
+"""
+
 
 RESET = "\033[0m"
 COLORS = {

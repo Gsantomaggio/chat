@@ -10,6 +10,25 @@ from source.exceptions import AlreadyLoggedException
 
 logger = Logger(__name__)
 
+"""
+TcpServer is a class that sets up a TCP server to handle multiple client connections.
+
+Attributes:
+    host (str): The host address for the server.
+    port (int): The port number for the server.
+    backlog (int): The maximum number of queued connections.
+    stop_event (Event): An event to signal the server to stop.
+    users (dict): A dictionary to store user information.
+    server_thread (Thread): A thread to run the server.
+
+Methods:
+    log_users_status(): Logs the status of connected users periodically.
+    handle_client_connection(conn, addr): Handles the connection with a client.
+    accept_connections(sock): Accepts incoming client connections.
+    run_server(): Runs the server, accepting connections and handling them.
+    stop_server(): Stops the server when the user presses ENTER.
+"""
+
 
 class TcpServer:
     def __init__(self, host="0.0.0.0", port=0, backlog=5):
