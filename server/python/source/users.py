@@ -4,6 +4,23 @@ from datetime import datetime
 
 
 class User:
+    """
+    User class represents a user in the system with attributes and methods to manage their status and connection.
+
+    Attributes:
+        username (str): The username of the user.
+        lastlogin (float): The timestamp of the user's last login.
+        isonline (bool): The online status of the user.
+        status (str): The current status of the user (online/offline).
+        conn (socket): The socket connection associated with the user.
+        messages (list): A list to store messages for the user.
+
+    Methods:
+        __str__(): Returns a string representation of the user.
+        login(conn: socket) -> int: Logs the user in and updates their status and connection.
+        printlastlogin(): Returns the last login time as a formatted string.
+    """
+
     def __init__(self, username: str):
         self.username = username
         self.lastlogin = None
@@ -33,6 +50,11 @@ class User:
 
 
 def logout(user: User | None):
+    """
+    Function:
+    logout(user: User | None): Logs out the user by updating their status and connection.
+    """
+
     if user:
         user.isonline = False
         user.status = "offline"

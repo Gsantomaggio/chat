@@ -1,3 +1,20 @@
+"""
+This module provides functions for reading and writing various data types to and from byte buffers.
+
+Functions:
+    read_header(buffer: bytes, offset: int) -> tuple: Reads the header from the buffer, returning the version and command.
+    read_string(buffer: bytes, offset: int) -> tuple: Reads a string from the buffer, returning the string and new offset.
+    read_uint64(buffer: bytes, offset: int) -> tuple: Reads a 64-bit unsigned integer from the buffer, returning the integer and new offset.
+    read_uint32(buffer: bytes, offset: int) -> tuple: Reads a 32-bit unsigned integer from the buffer, returning the integer and new offset.
+    read_uint16(buffer: bytes, offset: int) -> tuple: Reads a 16-bit unsigned integer from the buffer, returning the integer and new offset.
+    read_uint8(buffer: bytes, offset: int) -> tuple: Reads an 8-bit unsigned integer from the buffer, returning the integer and new offset.
+    read_timestamp(buffer: bytes, offset: int) -> tuple: Reads a timestamp from the buffer, returning the timestamp and new offset.
+    write_uint8(num: int) -> bytes: Converts an 8-bit unsigned integer to bytes.
+    write_uint16(num: int) -> bytes: Converts a 16-bit unsigned integer to bytes.
+    write_uint32(num: int) -> bytes: Converts a 32-bit unsigned integer to bytes.
+"""
+
+
 def read_header(buffer: bytes, offset: int):
     version, offset = read_uint8(buffer, offset)
     command, offset = read_uint16(buffer, offset)
