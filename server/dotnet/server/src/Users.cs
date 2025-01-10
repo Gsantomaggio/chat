@@ -24,6 +24,10 @@ namespace server.src
         public bool TryGetValue(string key, out SingleUser user) => users.TryGetValue(key, out user);
         public SingleUser GetOrAdd(string key, SingleUser user) => users.GetOrAdd(key, user);
 
+        public int Length() => users.Count;
+
+        public SingleUser[] GetUsers() => [.. users.Values];
+
 
         public static ushort Login(string username, NetworkStream stream, out SingleUser user)
         {

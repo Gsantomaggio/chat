@@ -3,6 +3,8 @@ using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using server.src;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace server
 {
@@ -16,7 +18,12 @@ namespace server
             private static readonly CancellationTokenSource _cancellationTokenSource = new();
             private const int PORT = 5555;
             private static readonly TcpListener _server = new(IPAddress.Any, PORT);
-            private static readonly ILogger _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger(nameof(ServerTCP));
+            private static readonly ILogger _logger = LoggerFactory.Create(builder =>
+                {
+                    builder
+                    .AddConsole()
+                    .SetMinimumLevel(LogLevel.Debug);
+                }).CreateLogger(nameof(ServerTCP));
 
             public static async Task Main()
             {
@@ -26,13 +33,39 @@ namespace server
 
                 var handleClientTask = HandleClientsAsync();
                 var waitStopServerTask = WaitStopServer();
+                var logUsersStatus = LogUsersStatus();
 
                 await waitStopServerTask;
 
                 _cancellationTokenSource.Cancel();
                 _server.Stop();
 
+                await logUsersStatus;
                 await handleClientTask;
+            }
+
+            private static async Task LogUsersStatus()
+            {
+                await Task.Run(() => PrintUsersStatus());
+                
+                static void PrintUsersStatus()
+                {
+                    while (!_cancellationTokenSource.IsCancellationRequested)
+                    {
+                        string usersToPrint = "Users:\n\t";
+                        if (Users.Instance.Length() < 1)
+                            usersToPrint = "Users: []\n";
+                        else
+                        {
+                            foreach (var u in Users.Instance.GetUsers())
+                            {
+                                usersToPrint += $"{u.Username} is {u.Status}, last login: {u.LastLogin} UTC\n\t";
+                            }
+                        }
+                        _logger.LogDebug("{message}", usersToPrint);
+                        Thread.Sleep(3000);
+                    }
+                }
             }
 
             private static async Task WaitStopServer()
@@ -71,8 +104,11 @@ namespace server
                         int bytesRead = await stream.ReadAsync(buffer);
                         if (bytesRead == 0)
                         {
-                            Users.Logout(usr);
-                            _logger.LogInformation("Connection closed by {Endpoint}", client.Client.RemoteEndPoint);
+                            if (usr != null)
+                            {
+                                Users.Logout(usr);
+                                _logger.LogInformation("User {username} logged out", usr.Username);
+                            }
                             break;
                         }
 
