@@ -4,13 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace server.src
 {
-    internal class MessageHandler(NetworkStream stream, BinaryReader reader, ILogger logger)
+    internal class MessageHandler(NetworkStream stream, BinaryReader reader)
     {
         private static readonly Encoding encoding = Encoding.UTF8;
         private readonly BinaryReader _reader = reader;
         private SingleUser? _user = null;
         private readonly NetworkStream _stream = stream;
-        private readonly ILogger _logger = logger;
 
         public async Task<SingleUser?> HandleMessage(SingleUser? usr)
         {
@@ -29,7 +28,7 @@ namespace server.src
 
                     if (responseCode == 4)
                     {
-                        _logger.LogWarning("User {username} already logged in", username);
+                        Logger.LogWarning("User {username} already logged in", username);
                         return _user;
                     }
 
@@ -44,25 +43,23 @@ namespace server.src
                         await SendResponse(correlationId, respCode);
                         return _user;
                     }
-                    
                     Message message = ReadMessage(correlationId);
 
                     if (Users.Instance.TryGetValue(message.To, out SingleUser user))
                     {
                         respCode = Constants.ResponseCodeOk;
                         await SendResponse(correlationId, respCode);
-                        await SendSingleMessage(user, message, _logger);
+                        await SendSingleMessage(user, message);
                     }
                     else
                     {
-                        _logger.LogWarning("User {receiver} not exists", message.To);
+                        Logger.LogWarning("User {receiver} not exists", message.To);
                         await SendResponse(correlationId, respCode);
                     }
-                    
                     return _user;
 
                 default:
-                    _logger.LogError("Received wrong COMMAND in the header. KEY: {key}", key);
+                    Logger.LogError("Received wrong COMMAND in the header. KEY: {key}", key);
                     throw new Exception($"Received wrong COMMAND in the header. KEY: {key}");
             }
         }
@@ -74,7 +71,7 @@ namespace server.src
             var remaining = _reader.BaseStream.Length - position;
             if (length != remaining)
             {
-                _logger.LogError("Message not correct, declared len {length}, but remaining len {remaining}", length, remaining);
+                Logger.LogError("Message not correct, declared len {length}, but remaining len {remaining}", length, remaining);
                 throw new Exception($"Message not correct, declared len {length}, but remaining len {remaining}");
             }
         }
@@ -109,7 +106,7 @@ namespace server.src
             }
         }
 
-        public static async Task SendSingleMessage(SingleUser user, Message message, ILogger logger)
+        public static async Task SendSingleMessage(SingleUser user, Message message)
         {
             if (user.Status == "online" && user.Stream != null)
             {
@@ -118,7 +115,7 @@ namespace server.src
             else
             {
                 user.Messages.Enqueue(message);
-                logger.LogWarning("User {username} is offline and received a message from {sender}", user.Username, message.From);
+                Logger.LogWarning("User {username} is offline and received a message from {sender}", user.Username, message.From);
             }
         }
 
@@ -132,7 +129,7 @@ namespace server.src
         {
             var responseBytes = Commands.CreateResponse(id, code);
             await _stream.WriteAsync(responseBytes);
-            _logger.LogInformation("Response sent with code {code} and correlationId {id}", code, id);
+            Logger.LogInformation("Response sent with code {code} and correlationId {id}", code, id);
         }
     }
 }
