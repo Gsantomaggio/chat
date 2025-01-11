@@ -25,6 +25,12 @@ func printColoredMessage(event *tcp_server.Event) {
 
 func main() {
 
+	args := os.Args
+	if len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s <server_address>\n", os.Args[0])
+		return
+	}
+
 	events := make(chan *tcp_server.Event)
 	go func() {
 		for event := range events {
@@ -32,7 +38,7 @@ func main() {
 		}
 	}()
 
-	tcpServer := tcp_server.NewTcpServer("localhost", 5555, events)
+	tcpServer := tcp_server.NewTcpServer(args[1], 5555, events)
 	err := tcpServer.StartInAThread()
 
 	if err != nil {
