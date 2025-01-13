@@ -1,8 +1,13 @@
-﻿internal static class EndianHelpers
+﻿using server.src;
+
+/// <summary>
+/// Provides extension methods for reading and writing big-endian values using BinaryReader and BinaryWriter.
+/// </summary>
+internal static class EndianHelpers
 {
     public static ushort ReadUInt16BE(this BinaryReader reader)
     {
-        byte[] bytes = reader.ReadBytes(2);
+        byte[] bytes = reader.ReadBytes(Constants.protocolUint16SizeBytes);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(bytes);
         return BitConverter.ToUInt16(bytes, 0);
@@ -10,7 +15,7 @@
 
     public static uint ReadUInt32BE(this BinaryReader reader)
     {
-        byte[] bytes = reader.ReadBytes(4);
+        byte[] bytes = reader.ReadBytes(Constants.protocolUint32SizeBytes);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(bytes);
         return BitConverter.ToUInt32(bytes, 0);
@@ -18,7 +23,7 @@
 
     public static ulong ReadUInt64BE(this BinaryReader reader)
     {
-        byte[] bytes = reader.ReadBytes(8);
+        byte[] bytes = reader.ReadBytes(Constants.protocolUint64SizeBytes);
         if (BitConverter.IsLittleEndian)
             Array.Reverse(bytes);
         return BitConverter.ToUInt64(bytes, 0);

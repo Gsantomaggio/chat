@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
-using server.server;
-using System.Reflection;
 
 namespace server.src
 {
+    /// <summary>
+    /// Provides logging functionality with different log levels and colored output.
+    /// </summary>
     internal static class Logger
     {
         private static readonly ILogger _logger = LoggerFactory.Create(builder =>
@@ -39,6 +40,10 @@ namespace server.src
             _logger.Log(level, messageToPrint, args);
         }
     }
+
+    /// <summary>
+    /// Contains color codes for different log levels to be used in console output.
+    /// </summary>
     internal static class Colors
     {
         public const string Reset = "\u001b[0m";
