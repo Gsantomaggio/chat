@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using server.src;
@@ -70,14 +71,7 @@ namespace server
                     while (!_cancellationTokenSource.IsCancellationRequested)
                     {
                         TcpClient client = await _server.AcceptTcpClientAsync();
-                        EndPoint? remoteEndPoint = client.Client.RemoteEndPoint;
-                        if (remoteEndPoint == null)
-                        {
-                            client.Close();
-                            continue;
-                        }
-                        
-                        Logger.LogInformation("Client connected from {Endpoint}", remoteEndPoint);
+                        Logger.LogInformation("Client connected from {Endpoint}", client.Client.RemoteEndPoint);
                         _ = Task.Run(() => HandleClientAsync(client));
                     }
                 }
