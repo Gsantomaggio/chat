@@ -3,6 +3,7 @@ import socket
 from threading import Thread, Event
 
 from source.message_handler import MessageHandler
+from source.wire_formatting import read_uint32
 from source.users import logout
 
 from source import Logger
@@ -65,9 +66,15 @@ class TcpServer:
             usr = None
             while not self.stop_event.is_set():
                 try:
-                    data = conn.recv(2048)
-                    if data:
-                        usr = MessageHandler(conn, self.users).read_message(data, usr)
+                    data_length = conn.recv(4)
+                    data_message = None
+                    if data_length:
+                        message_length, _ = read_uint32(data_length, 0)
+                        data_message = conn.recv(message_length)
+                    if data_message:
+                        usr = MessageHandler(conn, self.users).read_message(
+                            data_message, usr
+                        )
                     else:
                         logout(usr)
                         logger.info(f"User {usr.username} logged out")

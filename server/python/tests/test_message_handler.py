@@ -46,10 +46,9 @@ class TestMessageHandler(unittest.TestCase):
         self.mock_socket.send.assert_called()
 
     def test_read_message_send(self):
-        buffer = (
-            b"\x00\x00\x00\x24\x01\x00\x02\x00\x00\x00\x01\x00\x05Hello\x00\x05user2\x00\x05user1"
-            + int(time.time()).to_bytes(8)
-        )
+        message_bytes = b"\x00\x00\x00\x24\x01\x00\x02\x00\x00\x00\x01\x00\x05Hello\x00\x05user2\x00\x05user1"
+        time_bytes = int(time.time()).to_bytes(8)
+        buffer = message_bytes + time_bytes
         user = User("user1")
         user.conn = self.mock_socket
         self.mock_users["user2"] = User("user2")
@@ -79,9 +78,9 @@ class TestMessageHandler(unittest.TestCase):
         self.assertEqual(offset, 4)
 
     def test_read_command_message(self):
-        buffer = b"\x00\x05Hello" b"\x00\x05user2" b"\x00\x05user1" + int(
-            time.time()
-        ).to_bytes(8)
+        message_bytes = b"\x00\x05Hello\x00\x05user2\x00\x05user1"
+        time_bytes = int(time.time()).to_bytes(8)
+        buffer = message_bytes + time_bytes
 
         message = self.handler._read_command_message(buffer, 0, 1)
 
