@@ -51,9 +51,9 @@ namespace server
                 {
                     string usersToPrint = string.Join("\n\t", Users.Instance.GetUsers()
                         .Select(u => $"{u.Username} is {u.Status}, last login: {u.LastLogin} UTC"));
-                    
+
                     usersToPrint = usersToPrint != string.Empty ? $"Users:\n\t{usersToPrint}" : "Users: []\n";
-                    
+
                     Logger.LogDebug("{message}", usersToPrint);
                     Thread.Sleep(3000);
                 }
@@ -107,29 +107,73 @@ namespace server
             {
                 while (true)
                 {
-                    byte[] buffer = new byte[1024];
-                    int bytesRead = await stream.ReadAsync(buffer);
-                    if (bytesRead == 0)
-                    {
-                        if (usr != null)
-                        {
-                            Users.Logout(usr);
-                            Logger.LogInformation("User {username} logged out", usr.Username);
-                        }
-                        break;
-                    }
+                    int messageLength = await ReadStreamLengthAsync(4, stream);
+                    byte[] buffer = await ReadMessageStreamAsync(messageLength, stream);
 
-                    await using var memoryStream = new MemoryStream(buffer, 0, bytesRead);
+                    await using var memoryStream = new MemoryStream(buffer);
                     using var reader = new BinaryReader(memoryStream, encoding, leaveOpen: true);
 
                     MessageHandler messageHandler = new(stream, reader);
                     usr = await messageHandler.HandleMessage(usr);
                 }
             }
+            catch (SocketException)
+            {
+                if (usr != null)
+                {
+                    Users.Logout(usr);
+                    Logger.LogInformation("User {username} logged out", usr.Username);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error message: {errorMessage}", ex.Message);
+            }
             finally
             {
                 client.Close();
             }
+        }
+
+        /// <summary>
+        /// Asynchronously reads a specified number of bytes from a NetworkStream and converts it to an integer.
+        /// </summary>
+        /// <param name="length">The number of bytes to read from the stream.</param>
+        /// <param name="stream">The NetworkStream to read from.</param>
+        /// <returns>The integer value represented by the bytes read from the stream, or 0 if the length is 0.</returns>
+        private static async Task<int> ReadStreamLengthAsync(uint length, NetworkStream stream)
+        {
+            if (length == 0)
+                return 0;
+            byte[] buffer = new byte[length];
+            await stream.ReadAsync(buffer);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(buffer);
+            int messageLength = BitConverter.ToInt32(buffer);
+
+            return messageLength;
+        }
+
+        /// <summary>
+        /// Asynchronously reads a specified number of bytes from a NetworkStream and returns them as a byte array.
+        /// Throws a SocketException if the length is zero or if the number of bytes read does not match the specified length.
+        /// </summary>
+        /// <param name="length">The number of bytes to read from the stream.</param>
+        /// <param name="stream">The NetworkStream to read from.</param>
+        /// <returns>A byte array containing the bytes read from the stream.</returns>
+        /// <exception cref="SocketException">Thrown if the length is zero or if the number of bytes read does not match the specified length.</exception>
+        private static async Task<byte[]> ReadMessageStreamAsync(int length, NetworkStream stream)
+        {
+            if (length == 0)
+                throw new SocketException((int)SocketError.ConnectionReset);
+
+            byte[] buffer = new byte[length];
+            int bytesRead = await stream.ReadAsync(buffer);
+
+            if (bytesRead != length)
+                throw new SocketException((int)SocketError.ConnectionReset);
+
+            return buffer;
         }
     }
 }

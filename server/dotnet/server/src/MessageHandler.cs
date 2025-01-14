@@ -22,13 +22,6 @@ namespace server.src
         public async Task<SingleUser?> HandleMessage(SingleUser? usr)
         {
             _user = usr;
-            bool isValidMessage = ReadMessageLength(out var length, out var remaining);
-            if (!isValidMessage)
-            {
-                Logger.LogError("Message not correct, declared len {length}, but remaining len {remaining}", length, remaining);
-                return _user;
-            }
-
             ushort key = ReadHeader();
             uint correlationId = _reader.ReadUInt32BE();
 
@@ -76,20 +69,6 @@ namespace server.src
                     Logger.LogError("Received wrong COMMAND in the header. KEY: {key}", key);
                     throw new Exception($"Received wrong COMMAND in the header. KEY: {key}");
             }
-        }
-
-        /// <summary>
-        /// Reads the length of the incoming message and calculates the remaining bytes in the stream.
-        /// </summary>
-        /// <param name="length">The length of the incoming message.</param>
-        /// <param name="remaining">The number of remaining bytes in the stream.</param>
-        /// <returns>True if the length of the message matches the remaining bytes in the stream; otherwise, false.</returns>
-        public bool ReadMessageLength(out uint length, out long remaining)
-        {
-            length = _reader.ReadUInt32BE();
-            var position = _reader.BaseStream.Position;
-            remaining = _reader.BaseStream.Length - position;
-            return length == remaining;
         }
 
         /// <summary>
