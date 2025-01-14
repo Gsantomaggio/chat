@@ -30,6 +30,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "usage: %s <server_address>\n", os.Args[0])
 		return
 	}
+	serverAddr := args[1]
 
 	events := make(chan *tcp_server.Event)
 	go func() {
@@ -38,7 +39,7 @@ func main() {
 		}
 	}()
 
-	tcpServer := tcp_server.NewTcpServer(args[1], 5555, events)
+	tcpServer := tcp_server.NewTcpServer(serverAddr, events)
 	err := tcpServer.StartInAThread()
 
 	if err != nil {
