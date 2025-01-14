@@ -16,8 +16,8 @@ We provide examples in the following languages:
 
 ### How to run the golang stack:
 
-- Server: /server/go/run/server and run `go run main.go`
-- Client: /server/go/run/client and run `go run main.go localhost:5555`
+- Server: `/server/go/run/server` and run `go run main.go localhost:5555`
+- Client: `/server/go/run/client` and run `go run main.go localhost:5555` ( yes, the client is inside the `server` directory because they share the same codec) 
 - You can use two different terminals with two different users
 
 ### Protocol definition:
