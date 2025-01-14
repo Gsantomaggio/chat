@@ -16,8 +16,7 @@ type TcpServerer interface {
 }
 
 type TcpServer struct {
-	host        string
-	port        int
+	address     string
 	users       map[string]*User
 	mutexMap    sync.Mutex
 	listener    net.Listener
@@ -26,10 +25,9 @@ type TcpServer struct {
 	tickerUsers *time.Ticker
 }
 
-func NewTcpServer(host string, port int, events chan *Event) *TcpServer {
+func NewTcpServer(address string, events chan *Event) *TcpServer {
 	return &TcpServer{
-		host:        host,
-		port:        port,
+		address:     address,
 		users:       make(map[string]*User),
 		mutexMap:    sync.Mutex{},
 		chEvents:    events,
@@ -76,15 +74,14 @@ func (t *TcpServer) StartInAThread() error {
 	return nil
 }
 func (t *TcpServer) Start() error {
-	address := fmt.Sprintf("%s:%d", t.host, t.port)
-	listener, err := net.Listen("tcp", address)
+	listener, err := net.Listen("tcp", t.address)
 	if err != nil {
 		t.DispatchEvent(fmt.Sprintf("Error starting server: %v", err), true, 2)
 		return fmt.Errorf("error starting TCP server: %v", err)
 	}
 	t.listener = listener
 
-	t.DispatchEvent(fmt.Sprintf("Server started at %s", address), false, 2)
+	t.DispatchEvent(fmt.Sprintf("Server started at %s", t.address), false, 2)
 	t.dispatchUserStatus()
 	for {
 		conn, err := listener.Accept()
