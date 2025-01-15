@@ -16,6 +16,7 @@ namespace server
         private static readonly CancellationTokenSource _cancellationTokenSource = new();
         private const int PORT = 5555;
         private static readonly TcpListener _server = new(IPAddress.Any, PORT);
+        private static readonly ColoredLogger _logger = ColoredLogger.Instance;
 
         /// <summary>
         /// The main entry point for the server application. Starts the server, handles client connections,
@@ -23,7 +24,7 @@ namespace server
         /// </summary>
         public static async Task Main()
         {
-            Logger.LogInformation("Server started on port {Port}", PORT);
+            _logger.LogInformation("Server started on port {Port}", PORT);
 
             _server.Start();
 
@@ -54,7 +55,7 @@ namespace server
 
                     usersToPrint = usersToPrint != string.Empty ? $"Users:\n\t{usersToPrint}" : "Users: []\n";
 
-                    Logger.LogDebug("{message}", usersToPrint);
+                    _logger.LogDebug("{message}", usersToPrint);
                     Thread.Sleep(3000);
                 }
             });
@@ -65,7 +66,7 @@ namespace server
         /// </summary>
         private static async Task WaitStopServer()
         {
-            Logger.LogInformation("Press any key to stop the server");
+            _logger.LogInformation("Press any key to stop the server");
             await Task.Run(() => Console.ReadKey());
         }
 
@@ -84,13 +85,13 @@ namespace server
                         client.Close();
                         continue;
                     }
-                    Logger.LogInformation("Client connected from {Endpoint}", client.Client.RemoteEndPoint);
+                    _logger.LogInformation("Client connected from {Endpoint}", client.Client.RemoteEndPoint);
                     _ = Task.Run(() => HandleClientAsync(client));
                 }
             }
             catch
             {
-                Logger.LogInformation("Server stopped...");
+                _logger.LogInformation("Server stopped...");
             }
         }
 
@@ -122,12 +123,12 @@ namespace server
                 if (usr != null)
                 {
                     Users.Logout(usr);
-                    Logger.LogInformation("User {username} logged out", usr.Username);
+                    _logger.LogInformation("User {username} logged out", usr.Username);
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError("Error message: {errorMessage}", ex.Message);
+                _logger.LogError("Error message: {errorMessage}", ex.Message);
             }
             finally
             {

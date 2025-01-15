@@ -5,55 +5,65 @@ namespace server.src
     /// <summary>
     /// Provides logging functionality with different log levels and colored output.
     /// </summary>
-    internal static class Logger
+    public sealed class ColoredLogger
     {
-        private static readonly ILogger _logger = LoggerFactory.Create(builder =>
+        private readonly ILogger _logger;
+        private static readonly Lazy<ColoredLogger> _instance = new(() => new ColoredLogger());
+
+        public static ColoredLogger Instance => _instance.Value;
+
+        private ColoredLogger()
         {
-            builder
-            .AddConsole()
-            .SetMinimumLevel(LogLevel.Debug);
-        }).CreateLogger(nameof(ServerTCP));
-
-        public static void LogInformation(string message) => Log(LogLevel.Information, message);
-        public static void LogInformation(string message, params object[] args) => Log(LogLevel.Information, message, args);
-
-        public static void LogDebug(string message) => Log(LogLevel.Debug, message);
-        public static void LogDebug(string message, params object[] args) => Log(LogLevel.Debug, message, args);
-
-        public static void LogWarning(string message) => Log(LogLevel.Warning, message);
-        public static void LogWarning(string message, params object[] args) => Log(LogLevel.Warning, message, args);
-
-        public static void LogError(string message) => Log(LogLevel.Error, message);
-        public static void LogError(string message, params object[] args) => Log(LogLevel.Error, message, args);
-
-        public static void LogCritical(string message) => Log(LogLevel.Critical, message);
-        public static void LogCritical(string message, params object[] args) => Log(LogLevel.Critical, message, args);
-
-        private static void Log(LogLevel level, string message)
-        {
-            string messageToPrint = $"{Colors.ColorMap[level]}{message}{Colors.Reset}";
-            _logger.Log(level, messageToPrint);
+            _logger = LoggerFactory.Create(builder =>
+                builder.AddConsole()
+                      .SetMinimumLevel(LogLevel.Debug))
+                .CreateLogger(nameof(ServerTCP));
         }
-        private static void Log(LogLevel level, string message, params object[] args)
+
+        public void Log(LogLevel level, string message, params object[] args)
         {
-            string messageToPrint = $"{Colors.ColorMap[level]}{message}{Colors.Reset}";
-            _logger.Log(level, messageToPrint, args);
+            var color = ConsoleColors.GetColor(level);
+            var coloredMessageTemplate = $"{color}{message}{ConsoleColors.Reset}";
+
+            if (args.Length > 0)
+            {
+                _logger.Log(level, coloredMessageTemplate, args);
+            }
+            else
+            {
+                _logger.Log(level, coloredMessageTemplate);
+            }
         }
+
+        public void LogInformation(string message, params object[] args) =>
+            Log(LogLevel.Information, message, args);
+        public void LogDebug(string message, params object[] args) =>
+            Log(LogLevel.Debug, message, args);
+        public void LogWarning(string message, params object[] args) =>
+            Log(LogLevel.Warning, message, args);
+        public void LogError(string message, params object[] args) =>
+            Log(LogLevel.Error, message, args);
+        public void LogCritical(string message, params object[] args) =>
+            Log(LogLevel.Critical, message, args);
     }
 
     /// <summary>
     /// Contains color codes for different log levels to be used in console output.
     /// </summary>
-    internal static class Colors
+    internal static class ConsoleColors
     {
         public const string Reset = "\u001b[0m";
-        public static readonly Dictionary<LogLevel, string> ColorMap = new()
+
+        private static readonly Dictionary<LogLevel, string> _colorMap = new()
         {
-            { LogLevel.Debug, "\u001b[36m" },
-            { LogLevel.Information, "\u001b[32m" },
-            { LogLevel.Warning, "\u001b[33m" },
-            { LogLevel.Error, "\u001b[31m" },
-            { LogLevel.Critical, "\u001b[1;31m" }
+            { LogLevel.Debug, "\u001b[36m" },      // Ciano
+            { LogLevel.Information, "\u001b[32m" }, // Verde
+            { LogLevel.Warning, "\u001b[33m" },     // Giallo
+            { LogLevel.Error, "\u001b[31m" },       // Rosso
+            { LogLevel.Critical, "\u001b[1;31m" }   // Rosso Brillante
         };
+
+        public static string GetColor(LogLevel level) =>
+            _colorMap.TryGetValue(level, out var color) ? color : string.Empty;
     }
 }

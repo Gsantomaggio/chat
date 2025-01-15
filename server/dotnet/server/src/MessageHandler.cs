@@ -13,6 +13,7 @@ namespace server.src
         private readonly BinaryReader _reader = reader;
         private SingleUser? _user = null;
         private readonly NetworkStream _stream = stream;
+        private static readonly ColoredLogger _logger = ColoredLogger.Instance;
 
         /// <summary>
         /// Processes incoming messages and handles user login or message commands.
@@ -35,7 +36,7 @@ namespace server.src
 
                     if (responseCode == 4)
                     {
-                        Logger.LogWarning("User {username} already logged in", username);
+                        _logger.LogWarning("User {username} already logged in", username);
                         return _user;
                     }
 
@@ -60,13 +61,13 @@ namespace server.src
                     }
                     else
                     {
-                        Logger.LogWarning("User {receiver} not exists", message.To);
+                        _logger.LogWarning("User {receiver} not exists", message.To);
                         await SendResponse(correlationId, respCode);
                     }
                     return _user;
 
                 default:
-                    Logger.LogError("Received wrong COMMAND in the header. KEY: {key}", key);
+                    _logger.LogError("Received wrong COMMAND in the header. KEY: {key}", key);
                     throw new Exception($"Received wrong COMMAND in the header. KEY: {key}");
             }
         }
@@ -133,7 +134,7 @@ namespace server.src
             else
             {
                 user.Messages.Enqueue(message);
-                Logger.LogWarning("User {username} is offline and received a message from {sender}", user.Username, message.From);
+                _logger.LogWarning("User {username} is offline and received a message from {sender}", user.Username, message.From);
             }
         }
 
@@ -157,7 +158,7 @@ namespace server.src
         {
             var responseBytes = Commands.CreateResponse(id, code);
             await _stream.WriteAsync(responseBytes);
-            Logger.LogInformation("Response sent with code {code} and correlationId {id}", code, id);
+            _logger.LogInformation("Response sent with code {code} and correlationId {id}", code, id);
         }
     }
 }
