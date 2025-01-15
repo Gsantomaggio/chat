@@ -16,7 +16,7 @@ class TestMessageHandler(unittest.TestCase):
         self.handler = MessageHandler(self.mock_socket, self.mock_users)
 
     def test_read_message_login_success(self):
-        buffer = b"\x00\x00\x00\x0e\x01\x00\x01\x00\x00\x00\x01\x00\x05user1"
+        buffer = b"\x01\x00\x01\x00\x00\x00\x01\x00\x05user1"
         self.mock_user.login.return_value = 1
         self.mock_user.username = "user1"
         self.mock_user.conn = self.mock_socket
@@ -31,7 +31,7 @@ class TestMessageHandler(unittest.TestCase):
         self.mock_socket.send.assert_called()
 
     def test_read_message_login_already_logged(self):
-        buffer = b"\x00\x00\x00\x0e\x01\x00\x01\x00\x00\x00\x01\x00\x05user1"
+        buffer = b"\x01\x00\x01\x00\x00\x00\x01\x00\x05user1"
         self.mock_user.login.return_value = 4
         self.mock_user.username = "user1"
         self.mock_user.conn = self.mock_socket
@@ -46,7 +46,7 @@ class TestMessageHandler(unittest.TestCase):
         self.mock_socket.send.assert_called()
 
     def test_read_message_send(self):
-        message_bytes = b"\x00\x00\x00\x24\x01\x00\x02\x00\x00\x00\x01\x00\x05Hello\x00\x05user2\x00\x05user1"
+        message_bytes = b"\x01\x00\x02\x00\x00\x00\x01\x00\x05Hello\x00\x05user2\x00\x05user1"
         time_bytes = int(time.time()).to_bytes(8)
         buffer = message_bytes + time_bytes
         user = User("user1")
@@ -64,12 +64,6 @@ class TestMessageHandler(unittest.TestCase):
                 self.handler.read_message(buffer, user)
 
         self.mock_socket.send.assert_called()
-
-    def test_read_message_length(self):
-        buffer = b"\x00\x00\x00\x01\x01"
-        length, offset = self.handler._read_message_length(buffer)
-        self.assertEqual(length, 1)
-        self.assertEqual(offset, 4)
 
     def test_read_correlationId(self):
         buffer = b"\x00\x00\x00\x01"
