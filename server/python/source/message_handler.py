@@ -24,7 +24,6 @@ Classes:
 
 Functions:
     read_message(buffer: bytes, user: User | None) -> User: Reads and processes a message from the buffer.
-    _read_message_length(buffer: bytes, offset: int = 0) -> tuple: Reads the length of the message from the buffer.
     _read_correlationId(buffer: bytes, offset: int) -> int: Reads the correlation ID from the buffer.
     _read_command_message(buffer: bytes, offset: int, correlationId: int) -> Message: Reads a command message from the buffer.
     _create_command_message(m: Message) -> bytes: Creates a command message in bytes format.
@@ -47,8 +46,7 @@ class MessageHandler:
         self.users = users
 
     def read_message(self, buffer: bytes, user: User | None) -> User:
-        _, offset = self._read_message_length(buffer)
-        _, key, offset = read_header(buffer, offset)
+        _, key, offset = read_header(buffer, 0)
         correlationId, offset = self._read_correlationId(buffer, offset)
 
         if key == 1:
@@ -77,16 +75,6 @@ class MessageHandler:
 
         else:
             raise ValueError(f"Received wrong COMMAND in the header. KEY: {key}")
-
-    def _read_message_length(self, buffer: bytes, offset: int = 0) -> tuple:
-        length, offset = read_uint32(buffer, offset)
-        msg_len_rcv = len(buffer[offset:])
-        if length != msg_len_rcv:
-            raise ValueError(
-                f"Message not correct, declared len {length}, but received len {msg_len_rcv}"
-            )
-
-        return length, offset
 
     def _read_correlationId(self, buffer: bytes, offset: int) -> int:
         return read_uint32(buffer, offset)
